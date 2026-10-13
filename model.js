@@ -34,10 +34,8 @@ export function seed() {
     ],
     ads: [
       { id:'a1', owner:'lucas', title:'Une remorque pour vos projets', category:'À louer', price:'15 € / jour', location:'Prémeyzel', description:'Petite remorque disponible le week-end. On convient ensemble des dates, du retrait et des conditions de location.', art:'trailer' },
-      { id:'a2', owner:'alice', title:'Des œufs contre vos surplus', category:'À échanger', price:'Troc', location:'Prémeyzel', description:'Nos poules sont généreuses ! Quelques œufs à échanger contre des fruits, des légumes ou un petit coup de main.', art:'eggs' },
       { id:'a3', owner:'lucas', title:'Un coup de main au jardin', category:'Services', price:'À convenir', location:'Prémeyzel', description:'Tonte, petites plantations et entretien : discutons de ce dont vous avez besoin. Tarif et disponibilité à convenir ensemble.', art:'garden' },
       { id:'a4', owner:'alice', title:'Une perceuse, juste le temps d’un projet', category:'À prêter', price:'Prêt gratuit', location:'Prémeyzel', description:'Inutile d’en acheter une pour deux trous ! Perceuse avec quelques forets, à emprunter pour un petit projet.', art:'tools' },
-      { id:'a5', owner:'lucas', title:'Je garde votre compagnon', category:'Services', price:'À convenir', location:'Prémeyzel', description:'Promenade ou visite à votre chien pendant une absence. Rencontrons-nous pour en parler.', art:'dog' },
       { id:'a6', owner:'alice', title:'Des plants de menthe à adopter', category:'À donner', price:'Gratuit', location:'Prémeyzel', description:'Des petits plants prêts à rejoindre votre jardin. Apportez un pot !', art:'plant' },
     ],
     trails: [
@@ -52,23 +50,29 @@ export function seed() {
     reports: [], favorites: [],
   });
 }
-// Add each published content batch once without replacing local edits or deletions.
+// Apply published content changes once, preserving unrelated local activity.
 export function applyContentUpdates(state) {
-  if ((state.contentVersion || 0) >= 1) return state;
-  const additions = {
-    events: [{ id:'e-fete-du-four-2026', owner:'jp', title:'La fête du four', category:'Convivialité', date:'2026-10-31', location:'Ancien four à bois du village · Prémeyzel', description:'Le 31 octobre, le vieux four à bois du village reprend du service ! Les habitants peuvent commander leur pain, qui sera cuit dans le four. Un coup de main pour préparer le four et les pains est aussi très apprécié. Pour commander, proposer votre aide ou en savoir plus, contactez JP ou Marie. Horaire et modalités de commande à préciser avec eux.', capacity:0, art:'oven', registrationNote:'L’inscription ci-dessous indique seulement votre présence dans la démo. Pour commander du pain ou aider à la préparation, contactez directement JP ou Marie. Aucune commande ni demande d’aide n’est transmise par l’application.' }],
-    ads: [
-      { id:'a-marie-laure-dogsitting', owner:'marie-laure', title:'Garde de chiens avec Marie Laure', category:'Services', price:'Tarif à convenir', location:'Prémeyzel', description:'Marie Laure propose ses services de garde de chiens. Contactez-la pour discuter de vos besoins, des disponibilités et des modalités de garde.', art:'dog' },
-      { id:'a-emilie-eggs', owner:'emilie', title:'Émilie donne des œufs', category:'À donner', price:'Gratuit', location:'Prémeyzel', description:'Émilie a des œufs à donner aux voisins. Contactez-la pour connaître les quantités disponibles et convenir d’un moment pour les récupérer.', art:'eggs' },
-      { id:'a-mathias-web', owner:'mathias', title:'Une application web avec Mathias', category:'Services', price:'Sur devis', location:'Prémeyzel', description:'Vous avez une idée d’application web ? Mathias propose ses services en freelance pour vous aider à la construire. Contactez-le pour discuter de votre projet, de vos besoins et d’un devis.', art:'webapp' },
-      { id:'a-lou-icecream', owner:'lou', title:'Les glaces de Lou', category:'À vendre', price:'Prix à préciser', location:'Prémeyzel', description:'Lou vend des glaces. Contactez Lou pour découvrir les parfums, les prix et les disponibilités, et organiser votre achat.', art:'icecream' },
-      { id:'a-sebastien-campervan', owner:'sebastien', title:'Le camping-car de Sébastien à louer', category:'À louer', price:'Tarif à convenir', location:'Prémeyzel', description:'Sébastien propose son camping-car à la location. Contactez-le pour connaître les disponibilités, le tarif et les conditions de location.', art:'campervan' },
-    ],
-  };
-  for (const [collection, posts] of Object.entries(additions)) {
-    state[collection].unshift(...posts.filter(post => !state[collection].some(existing => existing.id === post.id)));
+  if ((state.contentVersion || 0) >= 2) return state;
+  if ((state.contentVersion || 0) < 1) {
+    const additions = {
+      events: [{ id:'e-fete-du-four-2026', owner:'jp', title:'La fête du four', category:'Convivialité', date:'2026-10-31', location:'Ancien four à bois du village · Prémeyzel', description:'Le 31 octobre, le vieux four à bois du village reprend du service ! Les habitants peuvent commander leur pain, qui sera cuit dans le four. Un coup de main pour préparer le four et les pains est aussi très apprécié. Pour commander, proposer votre aide ou en savoir plus, contactez JP ou Marie. Horaire et modalités de commande à préciser avec eux.', capacity:0, art:'oven', registrationNote:'L’inscription ci-dessous indique seulement votre présence dans la démo. Pour commander du pain ou aider à la préparation, contactez directement JP ou Marie. Aucune commande ni demande d’aide n’est transmise par l’application.' }],
+      ads: [
+        { id:'a-marie-laure-dogsitting', owner:'marie-laure', title:'Garde de chiens avec Marie Laure', category:'Services', price:'Tarif à convenir', location:'Prémeyzel', description:'Marie Laure propose ses services de garde de chiens. Contactez-la pour discuter de vos besoins, des disponibilités et des modalités de garde.', art:'dog' },
+        { id:'a-emilie-eggs', owner:'emilie', title:'Émilie donne des œufs', category:'À donner', price:'Gratuit', location:'Prémeyzel', description:'Émilie a des œufs à donner aux voisins. Contactez-la pour connaître les quantités disponibles et convenir d’un moment pour les récupérer.', art:'eggs' },
+        { id:'a-mathias-web', owner:'mathias', title:'Une application web avec Mathias', category:'Services', price:'Sur devis', location:'Prémeyzel', description:'Vous avez une idée d’application web ? Mathias propose ses services en freelance pour vous aider à la construire. Contactez-le pour discuter de votre projet, de vos besoins et d’un devis.', art:'webapp' },
+        { id:'a-lou-icecream', owner:'lou', title:'Les glaces de Lou', category:'À vendre', price:'Prix à préciser', location:'Prémeyzel', description:'Lou vend des glaces. Contactez Lou pour découvrir les parfums, les prix et les disponibilités, et organiser votre achat.', art:'icecream' },
+        { id:'a-sebastien-campervan', owner:'sebastien', title:'Le camping-car de Sébastien à louer', category:'À louer', price:'Tarif à convenir', location:'Prémeyzel', description:'Sébastien propose son camping-car à la location. Contactez-le pour connaître les disponibilités, le tarif et les conditions de location.', art:'campervan' },
+      ],
+    };
+    for (const [collection, posts] of Object.entries(additions)) {
+      state[collection].unshift(...posts.filter(post => !state[collection].some(existing => existing.id === post.id)));
+    }
   }
-  state.contentVersion = 1;
+  // Retire the original egg-barter and dog-sitting examples on existing devices.
+  for (const post of state.ads) {
+    if (['a2', 'a5'].includes(post.id)) post.deleted = true;
+  }
+  state.contentVersion = 2;
   return state;
 }
 function requireMember(actor) { if (!signedIn(actor)) throw new Error('Choisissez un profil habitant pour continuer.'); }

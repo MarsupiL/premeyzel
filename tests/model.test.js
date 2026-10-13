@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {seed,canEdit,registerEvent,cancelRegistration,eventUsed,bookTrip,decideBooking,cancelBooking,tripUsed,removePost,savePost,dateAfter,startConversation,sendMessage,reportPost,resolveReport} from '../model.js';
+import {seed,applyContentUpdates,canEdit,registerEvent,cancelRegistration,eventUsed,bookTrip,decideBooking,cancelBooking,tripUsed,removePost,savePost,dateAfter,startConversation,sendMessage,reportPost,resolveReport} from '../model.js';
 
 test('post changes are limited to author/admin, guest cannot publish',()=>{
-  const s=seed(),p=s.ads[0];assert.equal(canEdit('alice',p),false);assert.equal(canEdit('lucas',p),true);assert.equal(canEdit('admin',p),true);
+  const s=seed(),p=s.ads.find(p=>p.id==='a1');assert.equal(canEdit('alice',p),false);assert.equal(canEdit('lucas',p),true);assert.equal(canEdit('admin',p),true);
   assert.throws(()=>removePost(s,'alice','ads',p.id));assert.throws(()=>savePost(s,'guest','ads',p));
   removePost(s,'admin','ads',p.id);assert.equal(p.deleted,true);
 });
@@ -66,7 +66,7 @@ test('edit rejects capacity reduction below confirmed seats and informs particip
   const s=seed();decideBooking(s,'lucas','b1',true);const trip=s.trips.find(t=>t.id==='t1');
   assert.throws(()=>savePost(s,'lucas','trips',{...trip,capacity:0},trip.id));
   assert.throws(()=>savePost(s,'lucas','trips',{...trip,kind:'request'},trip.id));
-  const e=s.events[0];assert.throws(()=>savePost(s,'lucas','events',{...e,capacity:1},e.id));
+  const e=s.events.find(p=>p.id==='e1');assert.throws(()=>savePost(s,'lucas','events',{...e,capacity:1},e.id));
   savePost(s,'admin','events',{...e,title:'Nouvelle rencontre'},e.id);assert.ok(s.notifications.some(n=>n.userId==='admin'&&n.text.includes('modifié')));
 });
 test('rental listing stores its rate and can be edited by its owner',()=>{
@@ -80,6 +80,32 @@ test('conversations are reused per post and admin is not implicitly a participan
   assert.throws(()=>sendMessage(s,'alice',c.id,'   '));removePost(s,'lucas','ads','a1');sendMessage(s,'alice',c.id,'Merci !');assert.equal(c.messages.at(-1).text,'Merci !');
 });
 test('reporting does not remove posts; only admin resolves a report',()=>{
-  const s=seed();reportPost(s,'alice','ads','a1','À vérifier');assert.equal(s.ads[0].deleted,undefined);
+  const s=seed();reportPost(s,'alice','ads','a1','À vérifier');assert.equal(s.ads.find(p=>p.id==='a1').deleted,undefined);
   assert.throws(()=>reportPost(s,'alice','ads','a1','Doublon'));const id=s.reports[0].id;assert.throws(()=>resolveReport(s,'lucas',id));resolveReport(s,'admin',id);assert.equal(s.reports[0].resolved,true);
+});
+
+test('content upgrade preserves activity, edited posts and deleted publications across reloads',()=>{
+  const s=seed();
+  delete s.contentVersion;
+  s.events=s.events.filter(p=>p.id!=='e-fete-du-four-2026');
+  s.ads=s.ads.filter(p=>!['a-emilie-eggs','a-mathias-web','a-lou-icecream','a-sebastien-campervan'].includes(p.id));
+  const dog=s.ads.find(p=>p.id==='a-marie-laure-dogsitting');dog.deleted=true;
+  const remorque=s.ads.find(p=>p.id==='a1');remorque.title='Mon titre modifié';
+  const local=savePost(s,'alice','ads',{title:'Mon annonce locale',description:'À conserver après la mise à jour.',location:'Prémeyzel',category:'À prêter'});
+  decideBooking(s,'lucas','b1',true);
+  const activity=JSON.stringify([s.bookings,s.conversations,s.notifications]);
+  applyContentUpdates(s);
+  assert.equal(s.events.filter(p=>p.id==='e-fete-du-four-2026').length,1);
+  assert.equal(s.ads.filter(p=>p.id==='a-marie-laure-dogsitting').length,1);
+  assert.equal(dog.deleted,true);assert.equal(remorque.title,'Mon titre modifié');
+  assert.ok(s.ads.includes(local));assert.equal(JSON.stringify([s.bookings,s.conversations,s.notifications]),activity);
+  const snapshot=JSON.stringify(s);applyContentUpdates(s);assert.equal(JSON.stringify(s),snapshot);
+});
+test('date-only events survive editing and allow a time to be added or cleared',()=>{
+  const s=seed(),date=dateAfter(10).slice(0,10);
+  const event=savePost(s,'jp','events',{title:'Fête du village',description:'Préparons ensemble le four à pain.',location:'Village',date,eventTime:'',capacity:0});
+  assert.equal(event.date,date);assert.equal(event.eventTime,undefined);
+  savePost(s,'jp','events',{...event,date,eventTime:'14:30'},event.id);assert.equal(event.date,`${date}T14:30`);
+  savePost(s,'jp','events',{...event,date,eventTime:''},event.id);assert.equal(event.date,date);
+  const trip=s.trips.find(p=>p.id==='t1');assert.throws(()=>savePost(s,'lucas','trips',{...trip,date},trip.id));
 });

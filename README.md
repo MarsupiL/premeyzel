@@ -14,6 +14,7 @@ Visitors see events and trails; members also see rides and ads. This is a **UI s
 - Events may have a date with the time still to be confirmed. La fête du four directs bread orders and offers of help to JP or Marie; demo registrations do not place an order. Events support household registrations, capacity, and a strict FIFO whole-group waiting list. Cancelling a registration promotes waiting groups when sufficient room is available.
 - Drivers confirm requests; pending requests do not consume capacity. Acceptance checks available seats. Only the driver decides bookings. Weekly trip creation generates four individually bookable departures. Cancel one departure or all future departures in the series.
 - Deleting a booked event/trip cancels affected registrations/requests and creates local notifications; cancellation history remains in My activity.
+- Publications accept one optional JPEG, PNG or WebP photo (up to 10 MiB). Photos are resized to at most 1280 pixels and re-encoded locally, without source metadata, to fit the browser storage budget. The current illustrations act as sample photos; removing a photo restores an automatic illustration. Photos persist only in this browser, including offline, and are not uploaded to GitHub or shared. If storage is full or unavailable, publishing fails visibly and keeps the draft open without altering the saved post. Reset removes local photos along with other local changes.
 - Ads include renting, lending, gifts, barter, services, selling, and lost/found. Rentals show a rate; dates, conditions, and any payment are arranged between people. No payments in the pilot.
 - Conversations are displayed only to their participants, including when using the admin profile. Event registration lists and ride request identities are shown to the organiser/driver.
 - Trail geometry is illustrative and fictional, explicitly unsuitable for navigation. Residents can publish demo trail cards and select an illustrative route.
@@ -37,6 +38,7 @@ The GitHub Actions workflow builds, tests and deploys `dist/`. Set repository **
 
 - `model.js`: demo seed data, business rules, configurable village identity and storage key.
 - `app.js`: UI, local persistence, routes, notifications and form interactions.
+- `photos.js`: photo validation, local resizing and sample image sources.
 - `art.js`: original SVG illustrations and illustrative route map.
 - `style.css`: responsive layout and visual design.
 - `sw.js`: offline shell; build generates a content-based cache version.

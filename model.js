@@ -1,3 +1,5 @@
+import { samplePhoto, validPhoto } from './photos.js';
+
 export const CONFIG = { village: 'Prémeyzel', tagline: 'La vie est plus belle entre voisins.', storageKey: 'premeyzel-pilot-v1', version: 1 };
 export const PEOPLE = [
   { id: 'alice', name: 'Alice Martin', short: 'Alice', initials: 'AM', color: '#dce8d3' },
@@ -52,7 +54,7 @@ export function seed() {
 }
 // Apply published content changes once, preserving unrelated local activity.
 export function applyContentUpdates(state) {
-  if ((state.contentVersion || 0) >= 2) return state;
+  if ((state.contentVersion || 0) >= 3) return state;
   if ((state.contentVersion || 0) < 1) {
     const additions = {
       events: [{ id:'e-fete-du-four-2026', owner:'jp', title:'La fête du four', category:'Convivialité', date:'2026-10-31', location:'Ancien four à bois du village · Prémeyzel', description:'Le 31 octobre, le vieux four à bois du village reprend du service ! Les habitants peuvent commander leur pain, qui sera cuit dans le four. Un coup de main pour préparer le four et les pains est aussi très apprécié. Pour commander, proposer votre aide ou en savoir plus, contactez JP ou Marie. Horaire et modalités de commande à préciser avec eux.', capacity:0, art:'oven', registrationNote:'L’inscription ci-dessous indique seulement votre présence dans la démo. Pour commander du pain ou aider à la préparation, contactez directement JP ou Marie. Aucune commande ni demande d’aide n’est transmise par l’application.' }],
@@ -72,7 +74,13 @@ export function applyContentUpdates(state) {
   for (const post of state.ads) {
     if (['a2', 'a5'].includes(post.id)) post.deleted = true;
   }
-  state.contentVersion = 2;
+  // Existing illustrations become sample photos once; explicit removals stay removed.
+  for (const collection of ['events', 'trips', 'ads', 'trails']) {
+    for (const post of state[collection]) {
+      if (!Object.hasOwn(post, 'photo')) post.photo = samplePhoto(post.art);
+    }
+  }
+  state.contentVersion = 3;
   return state;
 }
 function requireMember(actor) { if (!signedIn(actor)) throw new Error('Choisissez un profil habitant pour continuer.'); }
@@ -140,6 +148,7 @@ export function removePost(state,actor,collection,id,series=false) {
 export function savePost(state,actor,collection,input,id) {
   requireMember(actor); if(!['events','trips','ads','trails'].includes(collection))throw new Error('Type inconnu.');
   const existing=id?requirePost(state,collection,id):null; if(existing&&!canEdit(actor,existing))throw new Error('Vous ne pouvez pas modifier cette publication.');
+  if (Object.hasOwn(input, 'photo') && !validPhoto(input.photo)) throw new Error('Photo invalide. Choisissez à nouveau une image.');
   const p={...input}; p.title=String(p.title||'').trim(); p.description=String(p.description||'').trim(); p.location=String(p.location||'').trim();
   if(p.title.length<4||p.title.length>100)throw new Error('Le titre doit contenir entre 4 et 100 caractères.');
   if(p.description.length<10||p.description.length>2000)throw new Error('La description doit contenir entre 10 et 2 000 caractères.');
@@ -193,3 +202,11 @@ export function reportPost(state,actor,collection,id,reason) {
   state.reports.unshift({id:uid(),postId:id,collection,userId:actor,reason:String(reason).slice(0,1000),resolved:false});notify(state,'admin',`Une publication a été signalée : « ${p.title} ».`);
 }
 export function resolveReport(state,actor,id) {if(!person(actor)?.admin)throw new Error('Accès réservé à l’admin.');const r=state.reports.find(r=>r.id===id);if(r)r.resolved=true;}
+
+export function savePostLocally(state, actor, collection, input, id, storage) {
+  const next = structuredClone(state);
+  savePost(next, actor, collection, input, id);
+  try { storage.setItem(CONFIG.storageKey, JSON.stringify(next)); }
+  catch { throw new Error('Enregistrement impossible : le stockage de ce navigateur est plein ou indisponible. Votre saisie est conservée ici. Retirez la photo ou libérez de l’espace, puis réessayez.'); }
+  return next;
+}

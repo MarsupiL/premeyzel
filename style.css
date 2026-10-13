@@ -28,7 +28,7 @@
 .modal select option{color:var(--ink);background:var(--white);line-height:1.5;padding:10px 12px}
 .modal select:focus-visible{outline:2px solid var(--green);outline-offset:3px}
 .modal select[data-pointer-focus='true']:focus{outline:none}
-.select-control{display:grid;min-width:0;font-size:1rem;font-weight:400}
+.select-control{display:grid;width:100%;min-width:0;font-size:1rem;font-weight:400}
 .select-control>select,.select-value{grid-area:1/1}
 .modal .select-control>select{color:transparent;height:100%}
 .select-value{align-self:center;padding:13px 2.875rem 13px 15px;min-width:0;line-height:1.5;overflow-wrap:anywhere;pointer-events:none;color:var(--ink)}
@@ -51,7 +51,7 @@
 .form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));column-gap:18px;align-items:start}
 .form-grid>label{min-width:0}
 @supports(grid-template-rows:subgrid){
-  .form-grid>label{display:grid;grid-template-rows:subgrid;grid-row:span 2;align-items:start}
+  .modal .form-grid>label{display:grid;grid-template-rows:subgrid;grid-row:span 2;align-items:start}
   .form-grid>label>:last-child{grid-row:2}
 }
 input[type='date'],input[type='datetime-local'],input[type='time'],.date-stamp,.trip-date{font-variant-numeric:tabular-nums}

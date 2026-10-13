@@ -11,3 +11,100 @@
 .profile-shortcuts{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}.profile-shortcuts .btn{font-size:12px}.nav-item{font-size:14px}.quick-link strong{font-size:12px}.quick-link small{font-size:10px}.quick-link{padding:15px 12px}.section-heading p{font-size:13px}.text-link{font-size:13px}.card h3{font-size:17px}.meta{font-size:12px}.card-footer .availability{font-size:11px}.badge,.badge.plain{font-size:11px}.author,.author>span:not(.avatar){font-size:11px}.ad-excerpt{font-size:13px;min-height:43px}.compact-ad strong{font-size:14px}.compact-ad small{font-size:12px}.compact-ad .badge{font-size:10px}.nature-panel p{font-size:13px}.results-count{font-size:13px}.chip{font-size:13px;min-height:42px}.search-box input{font-size:14px}.trip-main>p{font-size:13px}.trip-end .btn{font-size:13px}.trip-end>strong{font-size:13px}.trip-date span,.recurring{font-size:11px}.trail-select h3{font-size:16px}.trail-stats{font-size:12px}.trail-actions .text-link{font-size:12px}.trail-select .badge{font-size:11px}.fine,.modal-body .fine{font-size:12px}.notification p{font-size:14px}.activity-row strong{font-size:14px}.activity-row div>span{font-size:12px}.conversation strong{font-size:14px}.conversation small,.conversation span>span{font-size:12px}.chat-panel header p{font-size:12px}.message p{font-size:14px}.message small{font-size:11px}.chat-footnote{font-size:11px}.round-button{height:36px;width:36px}.empty p{font-size:14px}.profile-choice small,.compose-choices small{font-size:12px}.profile-choice strong,.compose-choices strong{font-size:15px}.participant{font-size:13px}.btn{font-size:14px}.btn.small{font-size:12px}.booking-box p{font-size:13px}.detail-facts{font-size:13px}.about-list{font-size:14px}.modal form label{font-size:14px}.modal input,.modal textarea,.modal select{font-size:15px}.sidebar-note p{font-size:13px}.sidebar-footer{font-size:10px}.reset-button{font-size:11px;min-height:42px}
 @media(max-width:1180px) and (min-width:681px){.nav-item{font-size:12px}.card-footer{flex-wrap:wrap}.card h3{font-size:16px}.trail-select h3{font-size:14px}.quick-link strong{font-size:12px}.trail-stats{font-size:11px}}
 @media(max-width:680px){.event-grid,.ad-grid{grid-template-columns:1fr}.card-image{height:175px}.card h3{font-size:18px}.card-body{padding:18px 18px 0}.card .meta{font-size:13px;align-items:center;gap:7px}.card .meta .icon{width:15px;height:15px;margin:0}.card .badge.plain{font-size:11px}.card-footer .availability{font-size:12px}.card-footer{padding:10px 0;margin-top:17px}.round-button{height:40px;width:40px}.round-button .icon{height:17px;width:17px}.card .date-stamp{height:50px;width:43px;top:13px;left:13px}.date-stamp strong{font-size:22px}.date-stamp span{font-size:9px}.image-badge>.badge{font-size:11px;padding:5px 9px}.card .price{font-size:14px}.card .ad-excerpt{font-size:14px;min-height:auto}.card-footer .author{font-size:12px}.card-footer .avatar.small{width:28px;height:28px;font-size:10px}.quick-link strong{font-size:11px}.quick-link small{font-size:10px}.quick-link{padding:14px 10px}.section-heading p{font-size:12px}.section-heading .text-link{font-size:11px}.hero-copy>p{font-size:13px}.hero{min-height:450px}.hero .btn{font-size:12px;min-height:44px}.hero-copy{padding-bottom:185px}.hero-label{font-size:10px}.chip{font-size:12px;min-height:40px}.trip-main>p{font-size:12px}.trip-main h3{font-size:17px}.trip-badges>.badge{font-size:10px}.trip-main .author{font-size:12px}.recurring{font-size:10px}.trip-end>.btn{font-size:13px;min-height:43px}.trip-date span{font-size:11px}.trip-date b{font-size:14px}.notice{font-size:12px}.trail-select h3{font-size:16px}.trail-stats{font-size:12px}.page-heading>div>p:last-child{font-size:14px}.page-heading>.btn{font-size:14px;min-height:44px}.modal input,.modal textarea,.modal select{font-size:16px}.modal .fine{font-size:12px}.booking-box .inline-form .btn{font-size:13px;min-height:44px}.mobile-nav a{font-size:10px}.profile-choice small,.compose-choices small{font-size:12px}.chat-panel header p{font-size:12px}.chat-footnote{font-size:11px}.message p{font-size:14px}.activity-row .badge{font-size:10px}.notification p{font-size:14px}.detail-description{font-size:14px!important}.modal-body>p{font-size:14px}.about-list{font-size:13px}.management .text-link{font-size:13px}.modal .checkbox{font-size:13px}.form-footer>.btn{font-size:13px;min-height:44px}.header-actions>.icon-button{min-width:36px;min-height:44px}.home-end{font-size:13px}.search-box input{font-size:16px}}
+
+/* Shared control and layout refinements from the École de Peyrieu review. */
+:root{--muted:#586650}
+.modal input,.modal textarea,.modal select{font-size:1rem;line-height:1.5;min-height:48px;border-color:#85927d;padding:12px 14px}
+.modal .checkbox input{min-height:20px;width:20px;height:20px}
+.modal select{
+  appearance:none;-webkit-appearance:none;
+  padding-inline-end:2.875rem;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m5 7.5 5 5 5-5' stroke='%23284f3c' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right .875rem center;background-size:1.125rem;
+  cursor:pointer;text-overflow:ellipsis;
+}
+.modal select:hover,.modal select:open{background-color:#f1f5e9;border-color:#587b51}
+.modal select:disabled{cursor:not-allowed;background-color:#eef0e7}
+.modal select option{color:var(--ink);background:var(--white);line-height:1.5;padding:10px 12px}
+.modal select:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.modal select[data-pointer-focus='true']:focus{outline:none}
+.select-control{display:grid;min-width:0;font-size:1rem;font-weight:400}
+.select-control>select,.select-value{grid-area:1/1}
+.modal .select-control>select{color:transparent;height:100%}
+.select-value{align-self:center;padding:13px 2.875rem 13px 15px;min-width:0;line-height:1.5;overflow-wrap:anywhere;pointer-events:none;color:var(--ink)}
+.select-control:has(select:disabled) .select-value{color:var(--muted)}
+@supports(appearance:base-select){
+  .modal select,.modal select::picker(select){appearance:base-select}
+  .modal select::picker-icon{display:none}
+  .modal select::picker(select){font:inherit;color:var(--ink);background:var(--white);border:1px solid #b8c5ad;border-radius:12px;box-shadow:0 12px 32px #223c2924,0 2px 6px #223c2910;padding:6px;margin-block:6px;min-inline-size:anchor-size(inline);max-inline-size:min(32rem,calc(100vw - 24px));max-block-size:min(26rem,60dvh);overflow:auto;overscroll-behavior:contain}
+  .modal select option{display:flex;align-items:center;gap:12px;min-block-size:44px;padding:10px 12px;border:0;border-radius:7px;white-space:normal;overflow-wrap:anywhere;background:transparent;cursor:pointer}
+  .modal select option:checked{background:#e8eedf;color:var(--green);font-weight:600}
+  .modal select option:not(:disabled):hover{background:#f0f3e8}
+  .modal select option:focus-visible{background:#e8eedf;outline:2px solid var(--green);outline-offset:-2px}
+  .modal select option:disabled{color:var(--muted);cursor:not-allowed}
+  .modal select option::checkmark{order:1;margin-inline-start:auto;flex-shrink:0;color:var(--green)}
+}
+@media(forced-colors:active){
+  .select-value{display:none}
+  .modal .select-control>select{appearance:auto;color:ButtonText;background-image:none}
+}
+.form-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));column-gap:18px;align-items:start}
+.form-grid>label{min-width:0}
+@supports(grid-template-rows:subgrid){
+  .form-grid>label{display:grid;grid-template-rows:subgrid;grid-row:span 2;align-items:start}
+  .form-grid>label>:last-child{grid-row:2}
+}
+input[type='date'],input[type='datetime-local'],input[type='time'],.date-stamp,.trip-date{font-variant-numeric:tabular-nums}
+input::-webkit-date-and-time-value{text-align:start;min-height:1.5em}
+.page-heading,.section-heading,.form-footer,.management,.trail-actions{flex-wrap:wrap}
+.page-heading>div,.modal-header h2,.chat-panel>header>div,.profile-choice>span:not(.avatar),.compose-choices>button>span,.quick-link>span:not(.quick-icon){min-width:0;overflow-wrap:anywhere}
+.card h3,.activity-row strong,.conversation strong,.detail-facts>span,.badge,.notice,.compact-ad strong{overflow-wrap:anywhere}
+.form-footer>.btn{flex:0 1 auto}
+.modal-header>.icon-button,.header-actions>.icon-button,.icon-button,.round-button,.chip,.btn.small{min-height:44px;min-width:44px}
+.text-link,.management .text-link,.trail-actions .text-link{min-height:44px;white-space:normal}
+.modal-header{padding-block:16px}
+.modal .booking-box,.modal .profile-shortcuts{margin-block:18px 24px}
+.modal form label{line-height:1.5}
+.modal .form-footer{margin-top:24px;padding-top:20px}
+.search-box,.chat-panel textarea{border-color:#85927d}
+input::placeholder,textarea::placeholder{color:#64705c;opacity:1}
+.meta,.card .meta,.badge.plain,.availability,.card-footer .availability,.author>span:not(.avatar),.hero-footnote,.conversation small,.mobile-nav a,.trail-stats,.recurring{color:#536649}
+.quick-link small,.hero-copy>p,.hero-label,.sidebar-footer,.reset-button,.eyebrow,.home-end{color:#586650}
+.mobile-nav a.active{color:var(--green)}
+.badge.amber,.availability.full{color:#76531f}
+.hero h1 em{color:#567147}
+.demo-bar,.demo-bar button,.brand small,.sidebar-footer,.reset-button{font-size:12px}
+.demo-bar{padding-block:8px;min-height:40px;flex-wrap:wrap}
+.brand small{font-size:9px}
+.chat-panel textarea{font-size:1rem;line-height:1.5}
+@media(max-width:900px){
+  .conversation-list{display:block;max-height:19rem;overflow-y:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .conversation{min-width:0;border-right:0;border-bottom:1px solid var(--line)}
+}
+@media(max-width:680px){
+  .demo-bar,.demo-bar button{font-size:11px}
+  .modal-header>.icon-button,.header-actions>.icon-button{min-width:44px;min-height:44px}
+  .topbar{padding-inline:14px;gap:8px}
+  .brand{gap:6px}.brand>span{font-size:22px}.brand img{width:32px;height:32px}
+  .header-actions{gap:0;flex-shrink:0}.profile-button{padding-left:4px;margin-left:0}
+  .mobile-nav a{font-size:11px;min-height:48px}
+  .form-footer>.btn{flex:1 1 7rem}
+  .quick-links{grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))}
+  .quick-link strong{font-size:13px}.quick-link small{font-size:11px}
+  .section-heading .text-link{font-size:12px}
+  .trip-main{min-width:0;flex:1 1 10rem}
+  .modal-header{padding-inline:16px}
+}
+/* Keep large text within the viewport, including native dialog size limits. */
+.modal{max-width:calc(100% - 32px)}
+@media(max-width:680px){
+  .modal,.modal.wide{max-width:calc(100% - 20px)}
+  .topbar{height:auto;min-height:77px;padding-block:12px;flex-wrap:wrap}
+  .header-actions{margin-inline-start:auto}
+  .mobile-nav a{min-width:0;flex:1 1 0;text-align:center;overflow-wrap:anywhere}
+  .mobile-nav a>span{max-width:100%}
+  .layout main{padding-bottom:calc(6rem + 5ex + env(safe-area-inset-bottom))}
+}
+.nav-item,.nav-item>span{min-width:0;overflow-wrap:anywhere}
+.chip:not(.selected),.nature-panel p,.map-label{color:#536649}
+.art-caption{background:#284f3c;color:#fffef5;padding:6px 9px;border-radius:6px}

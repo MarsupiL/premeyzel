@@ -1,17 +1,17 @@
 # Prémeyzel · Entre voisins
 
-French, mobile-first PWA pilot for village events, shared rides, advertisements and walking/MTB routes. Entirely fictional data. Designed for GitHub Pages without a backend, runtime dependencies, external fonts, analytics, or remote map tiles.
+French, mobile-first PWA pilot for village events, shared rides, advertisements and walking/MTB routes. Sample data plus village publications supplied by the project owner; all accounts and interactions are simulated. Designed for GitHub Pages without a backend, runtime dependencies, external fonts, analytics, or remote map tiles.
 
 ## Try it
 
-Switch between Alice, Lucas, Camille (admin), and Visitor using the profile button. Publish an event, request a ride, contact an advertiser, or manage reports. Switch to the other fictional resident to respond. Changes persist only in this browser. Reset restores the examples with upcoming dates.
+Switch between the resident demo profiles, Camille (admin), and Visitor using the profile button. Publish an event, request a ride, contact an advertiser, or manage reports. Switch to the other demo resident to respond. Changes persist only in this browser. Reset restores the examples, including La fête du four on 31 October 2026. Published content additions are merged once into existing browser data without overwriting edits, deletions or activity.
 
-Visitors see events and trails; members also see rides and ads. This is a **UI simulation, not authentication or access control**: all fictional data is included in the static source. Do not enter real personal data.
+Visitors see events and trails; members also see rides and ads. This is a **UI simulation, not authentication or access control**: all demo data is included in the static source. Do not enter real personal data.
 
 ## Product rules
 
 - All members publish immediately. Authors edit/delete their own posts; admins edit/delete any post. Reports do not hide posts.
-- Events support household registrations, capacity, and a strict FIFO whole-group waiting list. Cancelling a registration promotes waiting groups when sufficient room is available.
+- Events may have a date with the time still to be confirmed. La fête du four directs bread orders and offers of help to JP or Marie; demo registrations do not place an order. Events support household registrations, capacity, and a strict FIFO whole-group waiting list. Cancelling a registration promotes waiting groups when sufficient room is available.
 - Drivers confirm requests; pending requests do not consume capacity. Acceptance checks available seats. Only the driver decides bookings. Weekly trip creation generates four individually bookable departures. Cancel one departure or all future departures in the series.
 - Deleting a booked event/trip cancels affected registrations/requests and creates local notifications; cancellation history remains in My activity.
 - Ads include renting, lending, gifts, barter, services, selling, and lost/found. Rentals show a rate; dates, conditions, and any payment are arranged between people. No payments in the pilot.

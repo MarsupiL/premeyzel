@@ -3,6 +3,12 @@ export const PEOPLE = [
   { id: 'alice', name: 'Alice Martin', short: 'Alice', initials: 'AM', color: '#dce8d3' },
   { id: 'lucas', name: 'Lucas Perrin', short: 'Lucas', initials: 'LP', color: '#f3ddc5' },
   { id: 'admin', name: 'Camille · admin', short: 'Camille', initials: 'CD', color: '#dce6ee', admin: true },
+  { id: 'jp', name: 'JP', short: 'JP', initials: 'JP', color: '#eddbc0' },
+  { id: 'marie-laure', name: 'Marie Laure', short: 'Marie Laure', initials: 'ML', color: '#e8d9ca' },
+  { id: 'emilie', name: 'Émilie', short: 'Émilie', initials: 'É', color: '#f0e6c5' },
+  { id: 'mathias', name: 'Mathias', short: 'Mathias', initials: 'M', color: '#dce6ee' },
+  { id: 'lou', name: 'Lou', short: 'Lou', initials: 'L', color: '#f0dbd5' },
+  { id: 'sebastien', name: 'Sébastien', short: 'Sébastien', initials: 'S', color: '#dce8d3' },
 ];
 export const AD_CATEGORIES = ['Tout', 'À louer', 'À prêter', 'À donner', 'À échanger', 'Services', 'À vendre', 'Perdu / trouvé'];
 export const uid = () => globalThis.crypto.randomUUID();
@@ -14,7 +20,7 @@ export function dateAfter(days, hour = '10:00') {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${hour}`;
 }
 export function seed() {
-  return {
+  return applyContentUpdates({
     version: CONFIG.version, profile: 'alice', created: new Date().toISOString(),
     events: [
       { id: 'e1', owner: 'lucas', title: 'Un dimanche au verger', category: 'Rencontre', date: dateAfter(5, '10:30'), location: 'Le verger partagé · lieu fictif', description: 'On cueille, on partage, on prend le temps. Apportez un panier et quelque chose à grignoter pour un déjeuner entre voisins. Petits et grands sont les bienvenus !', capacity: 18, art: 'orchard' },
@@ -44,7 +50,26 @@ export function seed() {
     conversations: [{id:'c1', participants:['alice','lucas'], subject:'Une remorque pour vos projets', postId:'a1', messages:[{id:'m1', sender:'alice', text:'Bonjour Lucas, la remorque serait-elle disponible samedi ?', date:new Date().toISOString()},{id:'m2', sender:'lucas', text:'Bonjour Alice ! Oui, on peut convenir d’un horaire ici.', date:new Date().toISOString()}]}],
     notifications: [{id:'n1',userId:'lucas',text:'Alice demande 1 place pour votre trajet vers Belley.',read:false,date:new Date().toISOString()}],
     reports: [], favorites: [],
+  });
+}
+// Add each published content batch once without replacing local edits or deletions.
+export function applyContentUpdates(state) {
+  if ((state.contentVersion || 0) >= 1) return state;
+  const additions = {
+    events: [{ id:'e-fete-du-four-2026', owner:'jp', title:'La fête du four', category:'Convivialité', date:'2026-10-31', location:'Ancien four à bois du village · Prémeyzel', description:'Le 31 octobre, le vieux four à bois du village reprend du service ! Les habitants peuvent commander leur pain, qui sera cuit dans le four. Un coup de main pour préparer le four et les pains est aussi très apprécié. Pour commander, proposer votre aide ou en savoir plus, contactez JP ou Marie. Horaire et modalités de commande à préciser avec eux.', capacity:0, art:'oven', registrationNote:'L’inscription ci-dessous indique seulement votre présence dans la démo. Pour commander du pain ou aider à la préparation, contactez directement JP ou Marie. Aucune commande ni demande d’aide n’est transmise par l’application.' }],
+    ads: [
+      { id:'a-marie-laure-dogsitting', owner:'marie-laure', title:'Garde de chiens avec Marie Laure', category:'Services', price:'Tarif à convenir', location:'Prémeyzel', description:'Marie Laure propose ses services de garde de chiens. Contactez-la pour discuter de vos besoins, des disponibilités et des modalités de garde.', art:'dog' },
+      { id:'a-emilie-eggs', owner:'emilie', title:'Émilie donne des œufs', category:'À donner', price:'Gratuit', location:'Prémeyzel', description:'Émilie a des œufs à donner aux voisins. Contactez-la pour connaître les quantités disponibles et convenir d’un moment pour les récupérer.', art:'eggs' },
+      { id:'a-mathias-web', owner:'mathias', title:'Une application web avec Mathias', category:'Services', price:'Sur devis', location:'Prémeyzel', description:'Vous avez une idée d’application web ? Mathias propose ses services en freelance pour vous aider à la construire. Contactez-le pour discuter de votre projet, de vos besoins et d’un devis.', art:'webapp' },
+      { id:'a-lou-icecream', owner:'lou', title:'Les glaces de Lou', category:'À vendre', price:'Prix à préciser', location:'Prémeyzel', description:'Lou vend des glaces. Contactez Lou pour découvrir les parfums, les prix et les disponibilités, et organiser votre achat.', art:'icecream' },
+      { id:'a-sebastien-campervan', owner:'sebastien', title:'Le camping-car de Sébastien à louer', category:'À louer', price:'Tarif à convenir', location:'Prémeyzel', description:'Sébastien propose son camping-car à la location. Contactez-le pour connaître les disponibilités, le tarif et les conditions de location.', art:'campervan' },
+    ],
   };
+  for (const [collection, posts] of Object.entries(additions)) {
+    state[collection].unshift(...posts.filter(post => !state[collection].some(existing => existing.id === post.id)));
+  }
+  state.contentVersion = 1;
+  return state;
 }
 function requireMember(actor) { if (!signedIn(actor)) throw new Error('Choisissez un profil habitant pour continuer.'); }
 function requirePost(state, collection, id) { const p=state[collection].find(p=>p.id===id&&!p.deleted); if(!p)throw new Error('Cette publication n’est plus disponible.'); return p; }
@@ -116,7 +141,10 @@ export function savePost(state,actor,collection,input,id) {
   if(p.description.length<10||p.description.length>2000)throw new Error('La description doit contenir entre 10 et 2 000 caractères.');
   if(!p.location||p.location.length>120)throw new Error('Indiquez un lieu de 120 caractères maximum.');
   if(['events','trips'].includes(collection)) {
-    if(!p.date||!Number.isFinite(new Date(p.date).getTime())||new Date(p.date)<new Date())throw new Error('Choisissez une date et une heure futures.');
+    if(collection==='events'&&Object.hasOwn(p,'eventTime')){p.date=p.eventTime?`${p.date}T${p.eventTime}`:p.date;delete p.eventTime;}
+    const dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(p.date);
+    const deadline=new Date(dateOnly?`${p.date}T23:59:59`:p.date);
+    if(!p.date||!Number.isFinite(deadline.getTime())||deadline<new Date()||(collection==='trips'&&dateOnly))throw new Error(collection==='events'?'Choisissez une date future.':'Choisissez une date et une heure futures.');
     const n=Number(p.capacity); if(!Number.isInteger(n)||n<0||n>500||(collection==='trips'&&(n<1||n>8)))throw new Error('Capacité invalide.'); p.capacity=n;
     if(existing&&((collection==='events'&&n&&eventUsed(state,id)>n)||(collection==='trips'&&tripUsed(state,id)>n)))throw new Error('La capacité ne peut pas être inférieure aux places déjà confirmées.');
   }

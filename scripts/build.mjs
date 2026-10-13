@@ -1,6 +1,6 @@
 import { mkdir, cp, rm, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const files=['index.html','app.js','model.js','art.js','style.css','manifest.webmanifest','assets'];
+const files=['index.html','app.js','model.js','photos.js','art.js','style.css','manifest.webmanifest','assets'];
 await rm('dist',{recursive:true,force:true});await mkdir('dist');
 for(const file of files)await cp(file,`dist/${file}`,{recursive:true});
 const hash=createHash('sha256');for(const file of files.filter(f=>f!=='assets'))hash.update(await readFile(file));

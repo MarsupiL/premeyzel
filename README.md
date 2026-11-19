@@ -54,3 +54,9 @@ The GitHub Actions workflow builds, tests and deploys `dist/`. Set repository **
 The shared-route backend is https://premeyzel-parcours.mathias790372.chatgpt.site (administration at `/admin`). Its source is maintained in the separate `premeyzel-api` checkout. Migrating the other sections requires real resident accounts, server-side booking transactions, privacy/retention decisions and automated backups. Routes are supplied by contributors and have no independent terrain verification. Future villages can be supported through configuration and deployment; no multi-village accounts or billing are implemented.
 
 Prémeyzel uses the service free of charge. Selling a future version to other villages remains an option. This prototype is independent and is not presented as an official municipal service.
+
+## Real-account version (awaiting provider setup)
+
+`start.js` selects the resident interface only when the backend returns `accountsEnabled: true`. Until provider setup and activation, the existing pilot is retained. Preview the new sign-in page with `?accounts-preview=1#/connexion`. See [AUTH_SETUP.md](AUTH_SETUP.md) for exact Google, Apple and Supabase setup, owner protection, rollout and remaining launch work.
+
+The resident version uses the official Supabase SDK, bundled locally at build time. Run `npm ci` before tests/builds. `resident-app.js` supplies the login/account/admin UI plus shared events and ads; `auth.js` handles social sign-in; `api-client.js` sends verified session tokens to the existing backend. Trail ownership becomes account based when activated. No demo profile or role is used by the new interface.

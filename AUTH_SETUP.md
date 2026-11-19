@@ -1,6 +1,6 @@
 # Enable real resident accounts
 
-The account, role, shared-post and event-registration code is implemented. Google and Apple are not configured yet. The public pilot stays active until the backend rollout switch is enabled. The new interface can be reviewed at `?accounts-preview=1#/connexion`.
+Google sign-in and real resident accounts are live as of 19 November 2026. The Google OAuth app is in production mode. Apple is deferred until the Apple Developer membership is renewed. The backend uses Supabase Auth with the existing D1/R2 content storage. Public information pages are `confidentialite.html` and `conditions.html`. Account deletion remains manual; there is no automatic retention purge.
 
 ## 1. Create the authentication project
 
@@ -28,7 +28,7 @@ Apple client secrets for this flow expire and need periodic renewal (up to six m
 
 ## 4. Protect Mathias's owner access
 
-Keep the backend's existing secret `ADMIN_EMAIL`. Mathias should use the Google account with that verified address for the first app login; this creates the protected owner role. Apple Hide My Email may produce a different address and will then create an ordinary account. Do not claim owner access by a displayed name. The existing authenticated ChatGPT `/admin` page remains a recovery path and can manage roles.
+Keep the backend's existing secret `ADMIN_EMAIL` for trusted ChatGPT recovery access. `RESIDENT_OWNER_ID` selects the immutable Supabase user ID of Mathias's verified Google account; it is configured privately in Sites. After provider verification, that selected account receives the protected owner role, including if it first signed in before the configuration was set. Other accounts retain their stored roles. When `RESIDENT_OWNER_ID` is absent, the original verified-email bootstrap remains supported. Never choose an owner by a displayed name. The authenticated ChatGPT `/admin` page remains a separate recovery path.
 
 All other users start as `member`. Administrators can promote/demote other users, but nobody can demote the protected owner and an admin cannot demote themselves. Role changes are revision checked and logged.
 

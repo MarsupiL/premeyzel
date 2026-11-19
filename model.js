@@ -40,11 +40,7 @@ export function seed() {
       { id:'a4', owner:'alice', title:'Une perceuse, juste le temps d’un projet', category:'À prêter', price:'Prêt gratuit', location:'Prémeyzel', description:'Inutile d’en acheter une pour deux trous ! Perceuse avec quelques forets, à emprunter pour un petit projet.', art:'tools' },
       { id:'a6', owner:'alice', title:'Des plants de menthe à adopter', category:'À donner', price:'Gratuit', location:'Prémeyzel', description:'Des petits plants prêts à rejoindre votre jardin. Apportez un pot !', art:'plant' },
     ],
-    trails: [
-      { id:'r1', owner:'admin', title:'La boucle des vergers', activity:'Marche', distance:4.2, duration:75, elevation:90, difficulty:'Facile', description:'Une boucle illustrative entre vergers et lisières. Ce parcours fictif sert uniquement à tester l’interface.', location:'Autour du village · illustration', art:'orchard', route:0 },
-      { id:'r2', owner:'lucas', title:'Le chemin des sous-bois', activity:'Marche', distance:7.5, duration:135, elevation:240, difficulty:'Modéré', description:'Un exemple de balade plus longue, à l’ombre des arbres. Tracé fictif, non vérifié sur le terrain.', location:'Autour du village · illustration', art:'forest', route:1 },
-      { id:'r3', owner:'admin', title:'Les crêtes à VTT', activity:'VTT', distance:16, duration:120, elevation:480, difficulty:'Sportif', description:'Un exemple de fiche VTT avec dénivelé et difficulté. Ce tracé ne constitue pas un itinéraire praticable.', location:'Autour du village · illustration', art:'mountain', route:2 },
-    ],
+    trails: [],
     registrations: [{id:'reg1', eventId:'e1', userId:'admin', count:2, status:'confirmed', time:1}],
     bookings: [{id:'b1', tripId:'t1', userId:'alice', seats:1, status:'pending', time:1}],
     conversations: [{id:'c1', participants:['alice','lucas'], subject:'Une remorque pour vos projets', postId:'a1', messages:[{id:'m1', sender:'alice', text:'Bonjour Lucas, la remorque serait-elle disponible samedi ?', date:new Date().toISOString()},{id:'m2', sender:'lucas', text:'Bonjour Alice ! Oui, on peut convenir d’un horaire ici.', date:new Date().toISOString()}]}],
@@ -54,7 +50,7 @@ export function seed() {
 }
 // Apply published content changes once, preserving unrelated local activity.
 export function applyContentUpdates(state) {
-  if ((state.contentVersion || 0) >= 3) return state;
+  if ((state.contentVersion || 0) >= 4) return state;
   if ((state.contentVersion || 0) < 1) {
     const additions = {
       events: [{ id:'e-fete-du-four-2026', owner:'jp', title:'La fête du four', category:'Convivialité', date:'2026-10-31', location:'Ancien four à bois du village · Prémeyzel', description:'Le 31 octobre, le vieux four à bois du village reprend du service ! Les habitants peuvent commander leur pain, qui sera cuit dans le four. Un coup de main pour préparer le four et les pains est aussi très apprécié. Pour commander, proposer votre aide ou en savoir plus, contactez JP ou Marie. Horaire et modalités de commande à préciser avec eux.', capacity:0, art:'oven', registrationNote:'L’inscription ci-dessous indique seulement votre présence dans la démo. Pour commander du pain ou aider à la préparation, contactez directement JP ou Marie. Aucune commande ni demande d’aide n’est transmise par l’application.' }],
@@ -80,7 +76,9 @@ export function applyContentUpdates(state) {
       if (!Object.hasOwn(post, 'photo')) post.photo = samplePhoto(post.art);
     }
   }
-  state.contentVersion = 3;
+  // Retire only the old fictional seeds; keep resident-created local drafts.
+  for (const post of state.trails) if (['r1','r2','r3'].includes(post.id)) post.deleted=true;
+  state.contentVersion = 4;
   return state;
 }
 function requireMember(actor) { if (!signedIn(actor)) throw new Error('Choisissez un profil habitant pour continuer.'); }

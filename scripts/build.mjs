@@ -1,7 +1,7 @@
 import { mkdir, cp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
-const files=['index.html','confidentialite.html','conditions.html','informations.css','start.js','resident-app.js','messages-ui.js','resident.css','icons.js','api-client.js','auth.js','app.js','model.js','photos.js','gpx.js','trail-location.js','trail-map.js','trail-api.js','trails-ui.js','art.js','style.css','manifest.webmanifest','assets','vendor'];
+const files=['index.html','confidentialite.html','conditions.html','informations.css','start.js','resident-app.js','messages-ui.js','push-ui.js','resident.css','icons.js','api-client.js','auth.js','app.js','model.js','photos.js','gpx.js','trail-location.js','trail-map.js','trail-api.js','trails-ui.js','art.js','style.css','manifest.webmanifest','assets','vendor'];
 await rm('dist',{recursive:true,force:true});await mkdir('dist');
 for(const file of files)await cp(file,`dist/${file}`,{recursive:true});
 await build({entryPoints:['auth.js'],outfile:'dist/auth.js',bundle:true,external:['./api-client.js'],format:'esm',platform:'browser',target:'es2022'});

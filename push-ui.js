@@ -79,9 +79,12 @@ async function enable(permission){
 export async function disconnectPush(logout=false){
  epoch++;if(logout)owner=null;enabled=false;checked=0;
  if(!('caches'in window))return;
- await writeState({});
+ // Restricted/private browsers may expose CacheStorage but refuse writes.
+ // Continue unsubscribing so notification support can never trap someone signed in.
+ try{await writeState({});}catch{}
  const reg=await registration;if(!reg)return;
- const notifications=await reg.getNotifications();notifications.forEach(n=>n.close());
+ if(!reg.pushManager)return;
+ try{const notifications=await reg.getNotifications?.()||[];notifications.forEach(n=>n.close());}catch{}
  const sub=await reg.pushManager.getSubscription();if(!sub)return;
  let removed=false;try{await request('push/subscription',{method:'DELETE',body:{endpoint:sub.endpoint}});removed=true;}catch{}
  let unsubscribed=false;try{unsubscribed=await sub.unsubscribe();}catch{}

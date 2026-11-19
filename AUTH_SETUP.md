@@ -1,6 +1,6 @@
 # Enable real resident accounts
 
-Google sign-in and real resident accounts are live as of 19 November 2026. The Google OAuth app is in production mode. Apple is deferred until the Apple Developer membership is renewed. The backend uses Supabase Auth with the existing D1/R2 content storage. Public information pages are `confidentialite.html` and `conditions.html`. Account deletion remains manual; there is no automatic retention purge.
+Google sign-in and real resident accounts are live as of 19 November 2026. The Google OAuth app is in production mode. Apple is deferred and its login option is removed. The backend uses Supabase Auth with the existing D1/R2 content storage. Public information pages are `confidentialite.html` and `conditions.html`. Account deletion remains manual; there is no automatic retention purge.
 
 ## 1. Create the authentication project
 
@@ -10,6 +10,7 @@ From the project settings, obtain the project URL and its **publishable** key (`
 
 - Site URL: `https://marsupil.github.io/premeyzel/`
 - Redirect URL: `https://marsupil.github.io/premeyzel/`
+- Password recovery redirect: `https://marsupil.github.io/premeyzel/?auth=recovery`
 - Local QA URL only when testing: `http://127.0.0.1:4177/dist/`
 
 The callback uses the exact page URL without a fragment; after exchanging the code the app opens `#/compte`. Do not use broad wildcard production redirects.
@@ -24,7 +25,7 @@ Google registration/login creates the resident account automatically. The client
 
 Apple web sign-in requires an Apple Developer account, a primary App ID with Sign in with Apple enabled, a Services ID for this website, and a signing key. Associate the Supabase callback domain and URL with that Services ID, then configure its IDs and generated client secret in Supabase's Apple-provider settings. Keep private keys in storage controlled by Mathias; do not paste them into chat or commit them.
 
-Apple client secrets for this flow expire and need periodic renewal (up to six months). Verify Apple's current developer-program enrollment requirements and price before purchasing membership. Google can launch first while the Apple button clearly remains unavailable.
+Apple client secrets for this flow expire and need periodic renewal (up to six months). Verify Apple's current developer-program enrollment requirements and price before purchasing membership. The Apple button is not rendered; restoring it requires a new implementation and provider verification.
 
 ## 4. Protect Mathias's owner access
 
@@ -39,7 +40,8 @@ Use native Sites environment tools for project `appgprj_6aff06fc13e88191b467d2c1
 - `SUPABASE_URL`: project origin, `https://<project-ref>.supabase.co`
 - `SUPABASE_PUBLISHABLE_KEY`: public `sb_publishable_…` key
 - `AUTH_GOOGLE_ENABLED=true` after provider setup
-- `AUTH_APPLE_ENABLED=true` only after provider setup
+- `AUTH_APPLE_ENABLED=false` while Apple sign-in is deferred
+- `AUTH_EMAIL_DELIVERY_ENABLED=true` only after custom SMTP confirmation/reset delivery is verified
 - `ACCOUNTS_ENABLED=true` to activate the production interface and disable anonymous trail mutations
 
 Provider client secrets stay in Supabase, not the frontend/backend. Environment updates require deploying a saved backend version. The frontend `start.js` reads `/api/auth/config`; no separate provider secrets or runtime keys need to be committed to GitHub.
@@ -65,7 +67,7 @@ Ride booking and account deletion are the next production steps. Events already 
 
 ## Profiles and private messages
 
-The resident profile exposes only name and optional photo; the verified Google email remains a server-side identity attribute. Legacy optional contact columns are no longer exposed or accepted and are cleared when that resident next saves their profile. Avatars live in R2 and are returned only to authenticated residents, with private/no-store responses.
+The resident profile exposes only name and optional photo; the verified login email remains a server-side identity attribute. Legacy optional contact columns are no longer exposed or accepted and are cleared when that resident next saves their profile. Avatars live in R2 and are returned only to authenticated residents, with private/no-store responses.
 
 Private conversations use a unique pair of resident IDs, D1 messages, retry-safe message IDs, cursor pagination and monotonic read markers. All endpoints verify conversation membership; admin/owner roles do not bypass it. Messages and drafts are not saved in browser storage. Inbox counts refresh while the app is visible. Optional Web Push delivery is described below; no email/SMS delivery or end-to-end encryption is provided. Tests use disposable local identities and messages.
 
@@ -79,3 +81,13 @@ Residents opt in under Mon compte; permission is requested only from their click
 Only newly inserted messages trigger recipient delivery through `waitUntil`; idempotent message retries do not send a second push. Transport failures get up to three bounded attempts without failing the saved message. There is no durable retry queue after those attempts or a Worker interruption: notifications are best effort; the inbox remains authoritative. The push service keeps undelivered alerts for up to 24 hours. HTTP 404/410 removes expired subscriptions. Known push-service hosts are allowlisted, and redirects are refused. Notification text is generic (no message body or sender name), and notifications collapse per conversation.
 
 Logout removes the device subscription and clears its local account binding. The service worker rejects queued alerts for other accounts. Changing accounts does not inherit opt-in. An expired subscription is repaired on the next authenticated visit when permission is still granted. Test with disposable local accounts; do not send test messages to real residents.
+
+## Email and password
+
+Email is the login identifier; no separate username is used. Keep Supabase's Email provider, signups, and email confirmation enabled. Configure custom SMTP before setting `AUTH_EMAIL_DELIVERY_ENABLED=true`: the built-in mailer is restricted to project team addresses. Until then, existing email/password login works, while signup, reset requests and confirmation resend display a preparation notice and cannot submit.
+
+The app sends passwords directly to Supabase through its SDK. They are not sent to the village API or retained in drafts/storage. Registration sets only `full_name` metadata and never a role. New passwords require at least 10 characters. The API still requires a verified email and uses the immutable Supabase ID for ownership.
+
+Confirmation and recovery use PKCE: open the link in the same browser that requested it. Recovery registers its listener before SDK initialization; only a `PASSWORD_RECOVERY` event enables the password form. A one-hour, account-bound non-secret UI marker in sessionStorage survives reloads, and clears after password update or logout. Supabase validates the session for the update itself. Single-use URL codes are removed even when the exchange fails. Successful password reset leaves the user signed in on that device.
+
+Use a verified sender in Supabase Authentication → Emails → SMTP Settings. Store the SMTP credential there, never in this repository. Disable email-provider link tracking so confirmation links are not rewritten. Verify signup → confirmation → sign out → password login, and reset → new password login, using a consenting test account before enabling email delivery for residents. Google sign-in remains available throughout setup.

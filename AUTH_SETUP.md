@@ -62,3 +62,9 @@ Ride booking, private messaging, account deletion and notifications are the next
 - https://supabase.com/docs/reference/javascript/auth-getuser
 - https://supabase.com/pricing
 - https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web/
+
+## Profiles and private messages
+
+The resident profile exposes only name and optional photo; the verified Google email remains a server-side identity attribute. Legacy optional contact columns are no longer exposed or accepted and are cleared when that resident next saves their profile. Avatars live in R2 and are returned only to authenticated residents, with private/no-store responses.
+
+Private conversations use a unique pair of resident IDs, D1 messages, retry-safe message IDs, cursor pagination and monotonic read markers. All endpoints verify conversation membership; admin/owner roles do not bypass it. Messages and drafts are not saved in browser storage. Inbox counts refresh while the app is visible; no email/SMS/push delivery or end-to-end encryption is provided. Tests use disposable local identities and messages.

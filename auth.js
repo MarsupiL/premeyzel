@@ -11,7 +11,7 @@ export async function initializeAuth(onChange){
   setTokenProvider(async()=>{const {data,error}=await client.auth.getSession();if(error)throw error;return data.session?.access_token||null;});
   const initialized=await client.auth.initialize();
   if(initialized.error)throw new Error('La connexion n’a pas abouti. Réessayez depuis cette page.');
-  client.auth.onAuthStateChange((event)=>{if(['SIGNED_IN','SIGNED_OUT','USER_UPDATED','TOKEN_REFRESHED'].includes(event))setTimeout(onChange,0);});
+  client.auth.onAuthStateChange((event)=>{if(['SIGNED_IN','SIGNED_OUT','USER_UPDATED','TOKEN_REFRESHED'].includes(event))setTimeout(()=>onChange(event),0);});
  }
  // OAuth codes/errors are single-use and should not remain in browser history.
  const url=new URL(location.href);

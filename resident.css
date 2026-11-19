@@ -14,3 +14,5 @@
 @media(max-width:500px){.profile-photo-field{flex-direction:column}.profile-photo-field>div:last-child{width:100%}.profile-summary{align-items:flex-start}.avatar-photo.large{width:72px;height:72px}.dm-compose-footer>span{max-width:130px}.header-actions .messages-link{width:42px;min-width:42px;padding:8px}}
 
 [hidden]{display:none!important}
+
+.push-settings{display:flex;gap:24px;align-items:center;justify-content:space-between}.push-settings>div{max-width:720px}.push-settings .btn{flex-shrink:0}.push-settings p{line-height:1.6}.dm-push-link{margin:-12px 0 24px;font-size:.95rem}@media(max-width:700px){.push-settings{align-items:flex-start;flex-direction:column}.push-settings .btn{width:100%}}

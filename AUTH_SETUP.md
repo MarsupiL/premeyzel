@@ -52,7 +52,7 @@ Existing real GPX routes remain available. A signed-in author can attach their b
 
 The new events and ads collections start empty. The old local demo content remains in that browser's old storage key; it is not published as real content or assigned to new users based on names. Re-publish intended real content after confirming its current details.
 
-Ride booking, private messaging, account deletion and notifications are the next production steps. Events already have shared registration counts, duplicate protection and a whole-group waiting list. Author/admin deletion hides a publication; soft-deleted data remains retained until a retention policy is configured.
+Ride booking and account deletion are the next production steps. Events already have shared registration counts, duplicate protection and a whole-group waiting list. Author/admin deletion hides a publication; soft-deleted data remains retained until a retention policy is configured.
 
 ## References
 
@@ -67,4 +67,15 @@ Ride booking, private messaging, account deletion and notifications are the next
 
 The resident profile exposes only name and optional photo; the verified Google email remains a server-side identity attribute. Legacy optional contact columns are no longer exposed or accepted and are cleared when that resident next saves their profile. Avatars live in R2 and are returned only to authenticated residents, with private/no-store responses.
 
-Private conversations use a unique pair of resident IDs, D1 messages, retry-safe message IDs, cursor pagination and monotonic read markers. All endpoints verify conversation membership; admin/owner roles do not bypass it. Messages and drafts are not saved in browser storage. Inbox counts refresh while the app is visible; no email/SMS/push delivery or end-to-end encryption is provided. Tests use disposable local identities and messages.
+Private conversations use a unique pair of resident IDs, D1 messages, retry-safe message IDs, cursor pagination and monotonic read markers. All endpoints verify conversation membership; admin/owner roles do not bypass it. Messages and drafts are not saved in browser storage. Inbox counts refresh while the app is visible. Optional Web Push delivery is described below; no email/SMS delivery or end-to-end encryption is provided. Tests use disposable local identities and messages.
+
+
+## Message push notifications
+
+Web Push uses `@block65/webcrypto-web-push` 2.0.0 (RFC 8291 aes128gcm and RFC 8292 VAPID) on the existing Worker. The Worker generates its VAPID key pair on the server on first authenticated configuration access and persists it in the private `push_settings` D1 table (migration 0006). The private key is never returned by any API, logged, or committed. Keep that table in database backups: the pair must stay stable across deployments; rotation requires browser resubscription. Optional runtime overrides are `VAPID_PUBLIC_KEY`, secret `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` (all three required together). Migration 0005 stores per-device subscriptions, scoped to the authenticated resident, capped at eight devices.
+
+Residents opt in under Mon compte; permission is requested only from their click. iOS/iPadOS 16.4+ requires the Home Screen app. Browser/OS notification settings and Internet access affect delivery. A closed app receives pushes through its service worker; no tab polling is required. No paid Apple Developer membership is needed.
+
+Only newly inserted messages trigger recipient delivery through `waitUntil`; idempotent message retries do not send a second push. Transport failures get up to three bounded attempts without failing the saved message. There is no durable retry queue after those attempts or a Worker interruption: notifications are best effort; the inbox remains authoritative. The push service keeps undelivered alerts for up to 24 hours. HTTP 404/410 removes expired subscriptions. Known push-service hosts are allowlisted, and redirects are refused. Notification text is generic (no message body or sender name), and notifications collapse per conversation.
+
+Logout removes the device subscription and clears its local account binding. The service worker rejects queued alerts for other accounts. Changing accounts does not inherit opt-in. An expired subscription is repaired on the next authenticated visit when permission is still granted. Test with disposable local accounts; do not send test messages to real residents.

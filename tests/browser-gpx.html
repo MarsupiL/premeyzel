@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>GPX browser parser checks</title><style>body{font:16px/1.7 system-ui;max-width:800px;margin:40px auto;padding:20px}li{margin:12px 0}.fail{color:#a11}.pass{color:#174c2c}</style><h1>GPX browser parser checks</h1><p id="summary" role="status">Running…</p><ol id="results"></ol><script type="module">
+import {parseGPX,exportGPX} from '../gpx.js';
+const results=[];
+function test(name,fn){try{fn();results.push({name,pass:true});}catch(error){results.push({name,pass:false,error:error.message});}}
+function ok(condition){if(!condition)throw new Error('Assertion failed');}
+function rejects(xml){let failed=false;try{parseGPX(xml);}catch{failed=true;}ok(failed);}
+const points='<trkpt lat="45" lon="5"><ele>100</ele></trkpt><trkpt lat="45.001" lon="5"><ele>110</ele></trkpt>';
+const xml=`<gpx xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>Été &amp; forêt</name></metadata><trk><trkseg>${points}</trkseg><trkseg>${points}</trkseg></trk></gpx>`;
+test('GPX 1.1 preserves named, disconnected track segments',()=>{const p=parseGPX(xml);ok(p.name==='Été & forêt'&&p.track.segments.length===2&&p.distance===.22);});
+test('GPX 1.0 and route-point fallback are supported',()=>{const p=parseGPX('<gpx xmlns="http://www.topografix.com/GPX/1/0"><rte><name>Route</name><rtept lat="45" lon="5"/><rtept lat="45.001" lon="5"/></rte></gpx>');ok(p.points===2&&p.name==='Route'&&p.elevation===null);});
+test('Export and import preserve geometry and escape names',()=>{const p=parseGPX(xml);const round=parseGPX(exportGPX({title:'<Été> & forêt',activity:'Marche',track:p.track}));ok(JSON.stringify(p.track)===JSON.stringify(round.track)&&round.name==='<Été> & forêt');});
+test('Malformed XML, missing coordinates and unsafe declarations are rejected',()=>{rejects('<gpx><trk></gpx>');rejects('<gpx><trk><trkseg><trkpt lon="5"/><trkpt lat="45" lon="5"/></trkseg></trk></gpx>');rejects('<!DOCTYPE gpx [<!ENTITY x SYSTEM "file:///secret">]><gpx/>');});
+test('Extension points cannot be mistaken for real GPX coordinates',()=>{rejects('<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:x="urn:extension"><trk><trkseg><x:trkpt lat="45" lon="5"/><x:trkpt lat="46" lon="5"/></trkseg></trk></gpx>');});
+const original=await fetch('../assets/trails/les-chataignes.gpx').then(r=>r.text());
+test('Canonical village hike imports with all 367 points',()=>{const p=parseGPX(original);ok(p.points===367&&p.distance===9.11&&p.elevation===343&&p.gap===313);});
+for(const r of results){const li=document.createElement('li');li.className=r.pass?'pass':'fail';li.textContent=(r.pass?'PASS: ':'FAIL: ')+r.name+(r.error?' — '+r.error:'');document.querySelector('#results').append(li);}
+document.querySelector('#summary').textContent=`${results.filter(r=>r.pass).length}/${results.length} checks passed`;
+</script></html>

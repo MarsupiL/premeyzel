@@ -12,7 +12,7 @@ export const PEOPLE = [
   { id: 'lou', name: 'Lou', short: 'Lou', initials: 'L', color: '#f0dbd5' },
   { id: 'sebastien', name: 'Sébastien', short: 'Sébastien', initials: 'S', color: '#dce8d3' },
 ];
-export const AD_CATEGORIES = ['Tout', 'À louer', 'À prêter', 'À donner', 'À échanger', 'Services', 'À vendre', 'Perdu / trouvé'];
+export const AD_CATEGORIES = ['Tout', 'À louer', 'À prêter', 'À donner', 'À échanger', 'Services', 'Je recherche', 'À vendre', 'Perdu / trouvé'];
 export const uid = () => globalThis.crypto.randomUUID();
 export const person = id => PEOPLE.find(p => p.id === id);
 export const signedIn = id => !!person(id);

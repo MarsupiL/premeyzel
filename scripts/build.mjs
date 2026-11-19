@@ -1,9 +1,14 @@
-import { mkdir, cp, rm, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, cp, rm, readFile, writeFile, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-const files=['index.html','app.js','model.js','photos.js','art.js','style.css','manifest.webmanifest','assets'];
+const files=['index.html','app.js','model.js','photos.js','gpx.js','trail-location.js','trail-map.js','trail-api.js','trails-ui.js','art.js','style.css','manifest.webmanifest','assets','vendor'];
 await rm('dist',{recursive:true,force:true});await mkdir('dist');
 for(const file of files)await cp(file,`dist/${file}`,{recursive:true});
-const hash=createHash('sha256');for(const file of files.filter(f=>f!=='assets'))hash.update(await readFile(file));
+const hash=createHash('sha256');
+async function hashFile(file){hash.update(file);hash.update(await readFile(file));}
+for(const file of [...files,'sw.js']){
+ if(['assets','vendor'].includes(file)){for(const entry of (await readdir(file,{recursive:true,withFileTypes:true})).filter(e=>e.isFile()).map(e=>`${e.parentPath}/${e.name}`).sort())await hashFile(entry);}
+ else await hashFile(file);
+}
 const sw=(await readFile('sw.js','utf8')).replace('premeyzel-static-v1',`premeyzel-static-${hash.digest('hex').slice(0,12)}`);
 await writeFile('dist/sw.js',sw);await writeFile('dist/.nojekyll','');
 console.log('Static pilot built in dist/');

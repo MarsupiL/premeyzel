@@ -157,3 +157,5 @@ input::placeholder,textarea::placeholder{color:#64705c;opacity:1}
 .trail-thumbnail{display:block;width:56px;height:64px;flex:0 0 56px;overflow:hidden;border-radius:9px}
 
 .real-trail-map .trail-map-status{bottom:80px}.fullscreen-map .trail-map-status{bottom:125px}.fullscreen-route-summary .btn{font-size:.875rem}
+
+.fullscreen-foot:has(.share-status:empty){display:none}

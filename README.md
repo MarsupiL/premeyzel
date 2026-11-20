@@ -17,7 +17,7 @@ Google and email/password authentication; the backend owns roles and shared data
 - Members manage their own content. Administrators manage all content and roles; the
   owner's role is protected. All authorization is checked again on the server.
 - GPX import/export, IGN maps with contours, fullscreen viewing and opt-in GPS tracking.
-  GPS stays on the device. Map tiles and publication require Internet.
+  GPS stays on the device. Maps can be downloaded before departure for offline use; publishing still requires Internet.
 - Signed-in residents can offer or request a ride with a destination, date and time.
   Trips use Europe/Paris time, sort upcoming departures first and link to private messages.
   Ride offers display 0–8 available passenger seats, updated by the author or an admin;
@@ -123,3 +123,47 @@ its text, signed-in name and an allowlisted page label; no automatic device logs
 location. The backend routes it to the protected owner and sends a separate email
 copy through Brevo. Replies remain normal in-app messages. Drafts are memory-only,
 cleared on sign-out, and keep a retry ID after a failed request to avoid duplicates.
+
+## Offline trail maps
+
+Open a trail in full screen, expand **Télécharger la carte hors ligne**, and download
+before leaving mobile coverage. Readiness is confirmed only after the full GPX
+geometry and both IGN layers have been written. The copy can be refreshed or
+removed from the same panel; it is local to that browser/PWA and device.
+
+`trail-offline.js` plans a bounding box with a 1 km margin, downloads both Plan IGN
+and contour tiles at zooms 10–16 with two concurrent requests, and commits a
+public route snapshot last. Limits are 1,200 tiles per route, five routes and
+150 MiB including replacement staging. Larger routes use the existing GPX export.
+Failed/cancelled/quota-limited replacements preserve the previous pack. Startup
+checks every tile key before advertising a pack as ready; abandoned incomplete
+packs are eligible for cleanup after 24 hours. `navigator.storage.persist()` is
+requested when available, but browsers may decline or clear device storage.
+
+The service worker reads only explicitly downloaded IGN tiles from versioned
+route caches; static-shell upgrades preserve them. Zooms above 16 enlarge saved
+tiles. Panning outside the downloaded extent shows an availability notice. The
+CSP allows `connect-src https://data.geopf.fr/wmts` for downloads; no additional
+private API caching is introduced. Downloaded snapshots never retain management
+permissions, account data, photos or device location history. A route removed
+from the shared feed can remain as an explicitly labelled local copy until the
+user removes it. Live hunting zones are not persisted and are marked stale when
+offline.
+
+Public saved trails can reopen offline without initializing authentication. The
+normal account flow resumes on reconnection. A network-loss event never tears
+down the map/GPS watch. GPS uses the device geolocation API independently of map
+requests, but requires permission, a usable signal, and a visible open app;
+background or locked-screen tracking is not promised.
+
+IGN's [Plan IGN](https://www.data.gouv.fr/datasets/plan-ign) and
+[courbes de niveau](https://www.data.gouv.fr/datasets/courbes-de-niveau-4) datasets
+are published under Licence Ouverte 2.0. Attribution remains visible on the map;
+these are the open layers, not SCAN 25. The
+[IGN service terms](https://cartes.gouv.fr/cgu/) were checked for tile access.
+
+Tests exercise coverage bounds, atomic updates, interruption, eviction, limits,
+removal, the actual service-worker offline tile handler, route fallback and
+preservation of the GPS view when reception drops. Browser QA uses a disposable
+local fixture with all fetches rejected in the service worker and synthetic GPS;
+no production records or physical location are used.

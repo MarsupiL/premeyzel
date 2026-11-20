@@ -23,6 +23,8 @@ const FILES = [
   './gpx.js',
   './trail-location.js',
   './trail-map.js',
+  './trail-offline.js',
+  './trail-offline-ui.js',
   './polygon-editor.js',
   './hunting-state.js',
   './hunting-ui.js',
@@ -66,6 +68,40 @@ self.addEventListener('activate', (event) => {
   );
 });
 self.addEventListener('fetch', (event) => {
+  // Only explicitly downloaded, public IGN tiles. Never cache API responses,
+  // credentials or live hunting reports. Pack caches survive shell upgrades.
+  const url = new URL(event.request.url);
+  if (
+    event.request.method === 'GET' &&
+    url.origin === 'https://data.geopf.fr' &&
+    url.pathname === '/wmts' &&
+    ['GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'ELEVATION.CONTOUR.LINE'].includes(
+      url.searchParams.get('LAYER'),
+    )
+  ) {
+    event.respondWith(
+      (async () => {
+        if (event.request.cache !== 'reload') {
+          try {
+            const names = (await caches.keys())
+              .filter((name) => name.startsWith('premeyzel-offline-route-v1-'))
+              .sort()
+              .reverse();
+            for (const name of names) {
+              const saved = await (
+                await caches.open(name)
+              ).match(event.request, { ignoreVary: true });
+              if (saved) return saved;
+            }
+          } catch {
+            /* Storage failure must not block the online map. */
+          }
+        }
+        return fetch(event.request);
+      })(),
+    );
+    return;
+  }
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin)
     return;
   if (new URL(event.request.url).pathname.endsWith('/start.js'))

@@ -24,6 +24,8 @@ const files = [
   'gpx.js',
   'trail-location.js',
   'trail-map.js',
+  'trail-offline.js',
+  'trail-offline-ui.js',
   'polygon-editor.js',
   'hunting-state.js',
   'hunting-ui.js',

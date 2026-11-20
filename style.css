@@ -164,7 +164,7 @@ html:has(dialog.modal[open]),body:has(dialog.modal[open]){overflow:hidden;oversc
 
 .real-trail-map .trail-map-status{bottom:80px}.fullscreen-map .trail-map-status{bottom:125px}.fullscreen-route-summary .btn{font-size:.875rem}
 
-.fullscreen-foot:has(.share-status:empty){display:none}
+.fullscreen-foot:has(.share-status:empty):not(:has([data-offline-controls])){display:none}
 
 .trail-page-actions{display:flex;flex-wrap:wrap;gap:10px}.trail-page-actions .btn{min-height:44px}.activity-section>p{line-height:1.6}
 @media(max-width:680px){.trail-page-actions{width:100%}.trail-page-actions .btn{flex:1 1 auto;justify-content:center}}
@@ -189,3 +189,9 @@ html:has(dialog.modal[open]),body:has(dialog.modal[open]){overflow:hidden;oversc
 .hunting-draw-actions{display:flex;gap:8px;flex-wrap:wrap}.hunting-draw-status{margin:12px 0;font-size:1rem}.hunting-vertex{background:#fff;border:2px solid #a93021;border-radius:50%;box-shadow:0 1px 4px #0004;cursor:grab}.hunting-vertex span{display:flex;align-items:center;justify-content:center;width:100%;height:100%;font:700 13px system-ui;color:#932416}.hunting-vertex:focus-visible{outline:3px solid #20559c;outline-offset:3px}
 .hunting-draw-map::after{content:'+';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:450;pointer-events:none;color:#263d31;text-shadow:0 0 2px white;font:26px/1 system-ui}.hunting-form input[type=datetime-local]{min-width:0;width:100%;max-width:100%}.hunting-form .form-grid>label{min-width:0}
 @media(max-width:680px){.hunting-panel{padding:16px}.hunting-heading>.btn{width:100%}.hunting-draw-actions .btn{flex:1 1 45%;padding:9px;font-size:.875rem}.hunting-draw-map{height:320px}.hunting-form .form-grid{grid-template-columns:1fr}.hunting-map-note{font-size:13px;padding:8px}}
+
+/* Offline maps keep controls compact above the phone’s safe area. */
+.trail-map-status span{display:block}.trail-map-status span:empty{display:none}
+.offline-controls summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;font-weight:650;color:var(--forest)}
+.offline-controls .button-row{margin-block:10px;flex-wrap:wrap}.offline-controls progress{width:100%;accent-color:#426e58}.offline-controls p{max-width:75ch}
+.fullscreen-foot:has(.offline-controls){max-height:min(36dvh,300px);flex-shrink:0}.fullscreen-foot .offline-controls p{font-size:.875rem}

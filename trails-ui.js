@@ -13,6 +13,8 @@ import {
 } from './trail-api.js';
 import { defaultArt, preparePhoto, photoSource } from './photos.js';
 import { cardArt } from './art.js';
+import { offlineTrails } from './trail-offline.js';
+import { mountOfflineControls } from './trail-offline-ui.js';
 
 const CACHE = 'premeyzel-shared-trails-v1';
 let activeProfileName = '',
@@ -31,7 +33,8 @@ let root = null,
   query = '',
   filter = 'Tout',
   wantCompose = false,
-  loadSerial = 0;
+  loadSerial = 0,
+  savedPacks = [];
 const details = new Map(),
   dialogs = new Set();
 const activity = (p) => (p.activity === 'VTT' ? 'VTT' : 'Randonnée');
@@ -49,6 +52,11 @@ const visual = (p) => {
   return `<span class="post-visual">${cardArt(defaultArt('trails', p.activity === 'VTT' ? 'VTT' : 'Marche'))}${src ? `<img class="post-photo" alt="" src="${esc(src)}">` : ''}</span>`;
 };
 const byId = (id) => details.get(id) || items.find((p) => p.id === id);
+const savedPack = (id) => savedPacks.find((p) => p.trail.id === id);
+function includeSavedTrails() {
+  for (const pack of savedPacks)
+    if (!items.some((p) => p.id === pack.trail.id)) items.push(pack.trail);
+}
 function cache() {
   try {
     localStorage.setItem(
@@ -85,7 +93,7 @@ function updateList() {
     posts
       .map(
         (p) =>
-          `<article class="trail-card ${p.id === selectedId ? 'selected' : ''}"><button class="trail-select" data-trail="select" data-id="${p.id}" aria-pressed="${p.id === selectedId}"><span class="trail-thumbnail" aria-hidden="true">${visual(p)}</span><span><span class="badge plain">${activity(p)} · ${esc(p.difficulty)}</span><h3>${esc(p.title)}</h3><span class="trail-stats">${stats(p)}</span><span class="trail-author">Partagé par ${esc(p.authorName || 'un habitant')}</span></span></button><div class="trail-actions"><button class="text-link" data-trail="open" data-id="${p.id}">Voir le parcours</button><button class="text-link" data-trail="download" data-id="${p.id}" aria-label="Télécharger le GPX de ${esc(p.title)}">GPX</button></div></article>`,
+          `<article class="trail-card ${p.id === selectedId ? 'selected' : ''}"><button class="trail-select" data-trail="select" data-id="${p.id}" aria-pressed="${p.id === selectedId}"><span class="trail-thumbnail" aria-hidden="true">${visual(p)}</span><span><span class="badge plain">${activity(p)} · ${esc(p.difficulty)}</span><h3>${esc(p.title)}</h3><span class="trail-stats">${stats(p)}</span><span class="trail-author">Partagé par ${esc(p.authorName || 'un habitant')}</span>${savedPack(p.id) ? '<span class="badge plain">Carte hors ligne' + (savedPack(p.id).trail.revision !== p.revision ? ' · à actualiser' : '') + '</span>' : ''}${p.offlineCopy ? '<span class="trail-author">Copie enregistrée sur cet appareil</span>' : ''}</span></button><div class="trail-actions"><button class="text-link" data-trail="open" data-id="${p.id}">Voir le parcours</button><button class="text-link" data-trail="download" data-id="${p.id}" aria-label="Télécharger le GPX de ${esc(p.title)}">GPX</button></div></article>`,
       )
       .join('') || '<p class="notice">Aucun parcours ne correspond à votre recherche.</p>';
   updateSelected();
@@ -98,15 +106,23 @@ function updateList() {
 function updateSelected() {
   if (!root) return;
   const p = byId(selectedId);
+  map?.setOfflinePack(savedPack(selectedId) || null);
   root.querySelector('#selected-trail').innerHTML = p
     ? `<div><span class="badge">${activity(p)}</span><h2>${esc(p.title)}</h2><p>${stats(p)}</p></div><div class="button-row"><button class="btn primary" data-trail="open" data-id="${p.id}">Ouvrir en plein écran</button><button class="btn secondary" data-trail="download" data-id="${p.id}">Télécharger le GPX</button></div>`
     : '<p>Sélectionnez un parcours sur la carte ou dans la liste.</p>';
 }
 async function fullTrail(id) {
   const serial = loadSerial;
+  if (!navigator.onLine && savedPack(id)) return savedPack(id).trail;
   let p = byId(id);
   if (p && !p.preview) return p;
-  const full = await fetchTrail(id);
+  let full;
+  try {
+    full = await fetchTrail(id);
+  } catch (error) {
+    if (savedPack(id) && serial === loadSerial) return savedPack(id).trail;
+    throw error;
+  }
   if (serial !== loadSerial) throw new Error('La vue du parcours a changé. Rouvrez-le.');
   details.set(id, full);
   cache();
@@ -135,6 +151,13 @@ async function select(id) {
   }
 }
 async function refresh(force = false) {
+  if (!navigator.onLine) {
+    notice(
+      'Hors connexion · ouvrez un parcours avec la mention « Carte hors ligne » pour retrouver sa carte et suivre votre position.',
+      'warning',
+    );
+    return;
+  }
   if (loading) return;
   loading = true;
   const serial = loadSerial;
@@ -153,6 +176,7 @@ async function refresh(force = false) {
       for (const id of details.keys())
         if (!data.trails.some((p) => p.id === id)) details.delete(id);
       items = data.trails;
+      includeSavedTrails();
       etag = data.etag;
       cache();
       if (root) {
@@ -160,7 +184,11 @@ async function refresh(force = false) {
         if (selectedId) await select(selectedId);
       }
     }
-    notice('Parcours partagés · les nouvelles publications apparaissent automatiquement.');
+    notice(
+      navigator.onLine
+        ? 'Parcours partagés · les nouvelles publications apparaissent automatiquement.'
+        : 'Hors connexion · copie locale du parcours.',
+    );
   } catch (error) {
     if (serial !== loadSerial) return;
     notice(
@@ -193,7 +221,7 @@ export async function mountTrails(
   activeProfileName = authorName;
   root = element;
   const serial = ++loadSerial;
-  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PRENDRE L’AIR</p><h1>Autour de chez nous</h1><p>Randonnées et VTT, partagés entre habitants.</p></div><div class="button-row trail-page-actions"><button class="btn primary" data-trail="compose">Importer un GPX</button>${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div></div><div class="trails-sync notice" role="status">Chargement des parcours partagés…</div><div class="trail-search-row"><label class="search-box"><span class="sr-only">Rechercher un parcours</span><input id="trail-search" type="search" placeholder="Rechercher un parcours…" value="${esc(query)}"></label><button class="btn secondary" data-trail="refresh">Actualiser</button></div><div class="filters" aria-label="Type de parcours">${['Tout', 'Randonnée', 'VTT'].map((value) => `<button class="chip ${value === filter ? 'selected' : ''}" aria-pressed="${value === filter}" data-trail="filter" data-value="${value}">${value}</button>`).join('')}</div><p id="trail-results" class="results-count"></p><div id="hunting-zones"></div><div class="trails-layout real-trails"><div id="shared-trail-list" class="trail-list"></div><section class="map-panel"><div id="shared-trail-map" class="real-trail-map" role="region" aria-label="Carte IGN des parcours avec courbes de niveau"></div><div id="selected-trail" class="selected-trail"></div></section></div><p class="trail-help">Cliquez sur un tracé pour l’ouvrir en plein écran. En plein écran, activez « Ma position » pour suivre votre progression. Le fond IGN et ses courbes de niveau nécessitent Internet.</p>${residentMode ? '' : '<p class="fine">L’administration permet de modifier ou retirer tous les parcours après connexion avec le compte administrateur. Les autres rubriques du pilote restent en démonstration locale.</p>'}`;
+  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PRENDRE L’AIR</p><h1>Autour de chez nous</h1><p>Randonnées et VTT, partagés entre habitants.</p></div><div class="button-row trail-page-actions"><button class="btn primary" data-trail="compose">Importer un GPX</button>${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div></div><div class="trails-sync notice" role="status">Chargement des parcours partagés…</div><div class="trail-search-row"><label class="search-box"><span class="sr-only">Rechercher un parcours</span><input id="trail-search" type="search" placeholder="Rechercher un parcours…" value="${esc(query)}"></label><button class="btn secondary" data-trail="refresh">Actualiser</button></div><div class="filters" aria-label="Type de parcours">${['Tout', 'Randonnée', 'VTT'].map((value) => `<button class="chip ${value === filter ? 'selected' : ''}" aria-pressed="${value === filter}" data-trail="filter" data-value="${value}">${value}</button>`).join('')}</div><p id="trail-results" class="results-count"></p><div id="hunting-zones"></div><div class="trails-layout real-trails"><div id="shared-trail-list" class="trail-list"></div><section class="map-panel"><div id="shared-trail-map" class="real-trail-map" role="region" aria-label="Carte IGN des parcours avec courbes de niveau"></div><div id="selected-trail" class="selected-trail"></div></section></div><p class="trail-help">Cliquez sur un tracé pour l’ouvrir en plein écran. En plein écran, activez « Ma position » pour suivre votre progression. Avant de partir, ouvrez le parcours puis « Télécharger la carte hors ligne » pour enregistrer le plan IGN et ses courbes de niveau sur cet appareil.</p>${residentMode ? '' : '<p class="fine">L’administration permet de modifier ou retirer tous les parcours après connexion avec le compte administrateur. Les autres rubriques du pilote restent en démonstration locale.</p>'}`;
   root.addEventListener('click', handleClick);
   root.querySelector('#trail-search').addEventListener('input', (e) => {
     query = e.target.value;
@@ -217,7 +245,13 @@ export async function mountTrails(
       details.set(seed.id, seed);
     } catch {}
   }
+  try {
+    savedPacks = await offlineTrails.list();
+  } catch {
+    savedPacks = [];
+  }
   if (!root || serial !== loadSerial) return;
+  includeSavedTrails();
   const requested = new URLSearchParams(location.hash.split('?')[1] || '').get('parcours');
   if (requested) selectedId = requested;
   selectedId = selectedId || items[0]?.id;
@@ -228,6 +262,7 @@ export async function mountTrails(
     onSelect: select,
     onOpen: (id) => openRoute(id),
   });
+  map.setOfflinePack(savedPack(selectedId) || null);
   hunting = mountHunting(root.querySelector('#hunting-zones'), { account, onRequireAuth, dialog });
   hunting.attachMap(map);
   refresh(true);
@@ -339,7 +374,11 @@ async function openRoute(id) {
   try {
     const p = await fullTrail(id);
     if (serial !== loadSerial || !root) return;
-    notice('Parcours partagés · les nouvelles publications apparaissent automatiquement.');
+    notice(
+      navigator.onLine
+        ? 'Parcours partagés · les nouvelles publications apparaissent automatiquement.'
+        : 'Hors connexion · copie locale du parcours.',
+    );
     openMap(p);
   } catch (error) {
     notice(error.message, 'warning');
@@ -349,7 +388,7 @@ function openMap(p) {
   const own = residentMode ? !!account && p.canManage === true : ownedTrailIds().includes(p.id),
     d = dialog(
       p.title,
-      `<div class="fullscreen-route-summary"><span class="badge">${activity(p)}</span><strong>${stats(p)}</strong><span>${esc(p.difficulty)}</span><button class="btn secondary" type="button" data-export>Exporter GPX</button><button class="btn primary" type="button" data-share>Ouvrir dans une app</button>${own ? '<button class="btn secondary" type="button" data-edit>Modifier</button><button class="btn secondary" type="button" data-remove>Retirer</button>' : ''}${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div><div class="fullscreen-map" role="region" aria-label="Carte plein écran du parcours avec courbes de niveau"></div><div class="fullscreen-foot"><p class="share-status" role="status"></p></div>`,
+      `<div class="fullscreen-route-summary"><span class="badge">${activity(p)}</span><strong>${stats(p)}</strong><span>${esc(p.difficulty)}</span><button class="btn secondary" type="button" data-export>Exporter GPX</button><button class="btn primary" type="button" data-share>Ouvrir dans une app</button>${own ? '<button class="btn secondary" type="button" data-edit>Modifier</button><button class="btn secondary" type="button" data-remove>Retirer</button>' : ''}${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div><div class="fullscreen-map" role="region" aria-label="Carte plein écran du parcours avec courbes de niveau"></div><div class="fullscreen-foot"><div data-offline-controls></div><p class="share-status" role="status"></p></div>`,
       true,
     );
   const fullMap = createTrailMap(d.querySelector('.fullscreen-map'), {
@@ -357,8 +396,19 @@ function openMap(p) {
     selectedId: p.id,
     tracking: true,
   });
+  fullMap.setOfflinePack(savedPack(p.id) || null);
+  const cleanupOffline = mountOfflineControls(d.querySelector('[data-offline-controls]'), p, {
+    onChange(packs, pack) {
+      savedPacks = packs;
+      fullMap.setOfflinePack(pack);
+      items = items.filter((item) => !item.offlineCopy || savedPack(item.id));
+      includeSavedTrails();
+      updateList();
+    },
+  });
   const detachHunting = hunting?.attachMap(fullMap);
   d.onCleanup = () => {
+    cleanupOffline();
     detachHunting?.();
     fullMap.destroy();
   };

@@ -15,6 +15,31 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
+test('saved full tracks open without an API call offline and remain a fallback when reception fails', async () => {
+  let calls = 0;
+  const context = vm.createContext({
+    navigator: { onLine: false },
+    fetchTrail: async () => {
+      calls++;
+      throw new TypeError('Network unavailable');
+    },
+  });
+  vm.runInContext(
+    source +
+      `
+    savedPacks = [{ trail: { id: 'saved', revision: 1, track: { segments: [[[45, 5], [46, 6]]] }, canManage: false } }];
+    items = [{id:'saved',preview:true}];
+    this.fullTrail=fullTrail;
+  `,
+    context,
+  );
+  assert.equal((await context.fullTrail('saved')).canManage, false);
+  assert.equal(calls, 0);
+  context.navigator.onLine = true;
+  assert.equal((await context.fullTrail('saved')).track.segments.length, 1);
+  assert.equal(calls, 1);
+  await assert.rejects(context.fullTrail('not-saved'), /Network unavailable/);
+});
 test('trail thumbnails follow activity, replace pilot placeholders and retain real photos', () => {
   const context = vm.createContext({
     esc,

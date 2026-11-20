@@ -7,7 +7,12 @@ function recoveryFor(session){return !!session?.user?.id&&recovery?.id===session
 export function isPasswordRecovery(){return !!recovery&&recovery.expires>Date.now();}
 export function authErrorMessage(error){
  const messages={invalid_credentials:'Adresse e-mail ou mot de passe incorrect.',email_not_confirmed:'Confirmez votre adresse e-mail avant de vous connecter. Vous pouvez demander un nouveau lien ci-dessous.',user_already_exists:'Un compte existe peut-être déjà. Essayez de vous connecter ou de réinitialiser votre mot de passe.',weak_password:'Choisissez un mot de passe plus long et difficile à deviner.',same_password:'Choisissez un mot de passe différent du précédent.',over_email_send_rate_limit:'Trop de demandes d’e-mail. Patientez quelques minutes avant de réessayer.',over_request_rate_limit:'Trop de tentatives. Patientez quelques minutes avant de réessayer.',email_address_invalid:'Vérifiez votre adresse e-mail.',email_address_not_authorized:'L’envoi des e-mails de connexion est en cours de préparation. Utilisez Google pour le moment.',signup_disabled:'Les inscriptions par e-mail ne sont pas encore ouvertes.',email_provider_disabled:'La connexion par e-mail est momentanément indisponible.',otp_expired:'Ce lien a expiré ou a déjà été utilisé. Demandez un nouveau lien.',flow_state_expired:'Ce lien a expiré. Demandez un nouveau lien depuis ce navigateur.',flow_state_not_found:'Ouvrez ce lien dans le navigateur où vous l’avez demandé, ou demandez un nouveau lien.',validation_failed:'Vérifiez les informations saisies.'};
- return messages[error?.code]||(error?.status===429?messages.over_request_rate_limit:error?.name==='AuthRetryableFetchError'?'Connexion impossible. Vérifiez Internet et réessayez.':'La demande n’a pas abouti. Réessayez dans un instant.');
+ if(messages[error?.code])return messages[error.code];
+ if(error?.status===429)return messages.over_request_rate_limit;
+ // The SDK also uses AuthRetryableFetchError for HTTP 5xx responses, including SMTP failures.
+ if(error?.status>=500&&error.status<600)return 'Le service de connexion rencontre un problème. Réessayez dans quelques instants.';
+ if(error?.name==='AuthRetryableFetchError'&&error.status===0)return 'Connexion impossible. Vérifiez Internet et réessayez.';
+ return 'La demande n’a pas abouti. Réessayez dans un instant.';
 }
 function authClient(){if(!client||!configuration?.accountsEnabled)throw new Error('Le service de connexion est indisponible.');return client.auth;}
 function redirectURL(recover=false){const url=new URL(location.href);url.hash='';url.search=recover?'?auth=recovery':'';return url.href;}

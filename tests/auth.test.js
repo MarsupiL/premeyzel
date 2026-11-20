@@ -45,6 +45,16 @@ test('authentication failures are translated and never echo raw server errors or
  const f=fixture({error:{code:'invalid_credentials',message:'sensitive test error'}});await f.api.initializeAuth(()=>{});await assert.rejects(f.api.signInWithEmail('alice@example.test','test password'),/Adresse e-mail ou mot de passe incorrect/);
  assert.doesNotMatch(f.api.authErrorMessage({message:'sensitive test error'}),/sensitive/);
 });
+test('reset server errors are not reported as an Internet failure',async()=>{
+ for(const status of [500,502,503,504,520]){
+  const f=fixture({error:{name:'AuthRetryableFetchError',status,message:'535 Authentication failed: private SMTP details'}});await f.api.initializeAuth(()=>{});
+  await assert.rejects(f.api.requestPasswordReset('alice@example.test'),error=>{
+   assert.match(error.message,/service de connexion rencontre un problème/);assert.doesNotMatch(error.message,/Internet|SMTP|535|private/);return true;
+  });
+ }
+ const f=fixture();assert.match(f.api.authErrorMessage({name:'AuthRetryableFetchError',status:0}),/Vérifiez Internet/);
+ assert.match(f.api.authErrorMessage({name:'AuthRetryableFetchError',status:429}),/Trop de tentatives/);
+});
 test('logout clears recovery state and short passwords never reach Supabase',async()=>{
  const f=fixture({event:'PASSWORD_RECOVERY'});await f.api.initializeAuth(()=>{});await assert.rejects(f.api.updateRecoveredPassword('short'));assert.equal(f.calls.length,0);await f.api.signOut();assert.equal(f.storage.size,0);assert.equal(f.api.isPasswordRecovery(),false);
 });

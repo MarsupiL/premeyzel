@@ -20,7 +20,6 @@ let owner = null,
   busy = false,
   checked = 0,
   error = '',
-  notice = '',
   epoch = 0;
 let registration = null;
 if ('serviceWorker' in navigator)
@@ -90,12 +89,12 @@ function content() {
         'Le service de notifications est momentanément indisponible. Vous pouvez toujours lire vos messages dans l’application.';
     const canEnable = Notification.permission !== 'denied' && config?.enabled !== false;
     button = enabled
-      ? `<div class="button-row"><button class="btn secondary" data-push-action="test" ${busy ? 'disabled' : ''}>Tester les notifications</button><button class="btn secondary" data-push-action="disable" ${busy ? 'disabled' : ''}>Désactiver sur cet appareil</button></div>`
+      ? `<button class="btn secondary" data-push-action="disable" ${busy ? 'disabled' : ''}>Désactiver sur cet appareil</button>`
       : canEnable
         ? `<button class="btn primary" data-push-action="enable" ${busy || !config ? 'disabled' : ''}>${busy ? 'Veuillez patienter…' : 'Activer les notifications'}</button>`
         : '';
   }
-  return `<div><h2>Notifications du village</h2><p>${text}</p><p class="fine">Ce choix est propre à chaque appareil. La livraison dépend de la connexion Internet et des réglages de notifications de votre appareil.</p>${notice ? `<p role="status">${esc(notice)}</p>` : ''}${error ? `<p class="form-error" role="alert">${esc(error)}</p>` : ''}</div>${button}`;
+  return `<div><h2>Notifications du village</h2><p>${text}</p><p class="fine">Ce choix est propre à chaque appareil. La livraison dépend de la connexion Internet et des réglages de notifications de votre appareil.</p>${error ? `<p class="form-error" role="alert">${esc(error)}</p>` : ''}</div>${button}`;
 }
 export function pushSettings() {
   return `<section class="activity-section push-settings" data-push-settings aria-live="polite">${content()}</section>`;
@@ -109,7 +108,6 @@ export async function syncPushAccount(user, force = false) {
     enabled = false;
     config = null;
     error = '';
-    notice = '';
   }
   if (!supported() || busy || (!force && Date.now() - checked < 60000)) {
     changed();
@@ -187,7 +185,6 @@ async function enable(permission) {
     serial = epoch;
   busy = true;
   error = '';
-  notice = '';
   changed();
   try {
     if ((await permission) !== 'granted')
@@ -237,29 +234,6 @@ export async function updateAppBadge(count) {
     // Optional OS badging must never prevent reading messages or signing out.
   }
 }
-async function testNotification() {
-  const serial = epoch;
-  busy = true;
-  error = '';
-  notice = '';
-  changed();
-  try {
-    const reg = await getRegistration();
-    const sub = await reg.pushManager.getSubscription();
-    if (serial !== epoch) return;
-    if (!sub) throw new Error('Réactivez les notifications sur cet appareil avant le test.');
-    const result = await request('push/test', { method: 'POST', body: { endpoint: sub.endpoint } });
-    if (serial !== epoch) return;
-    if (!result.accepted) throw new Error('Le test n’a pas pu être envoyé. Réessayez.');
-    notice =
-      'Test accepté par le service de notifications. Vérifiez qu’une alerte « Prémeyzel · Test de notification » apparaît sur cet appareil.';
-  } catch (err) {
-    if (serial === epoch) error = err.message;
-  } finally {
-    busy = false;
-    changed();
-  }
-}
 // Remove the server subscription before logout; local unsubscribe also prevents
 // future delivery if the network fails. An already queued declarative push may
 // still show its generic fallback; it carries no private text or account link.
@@ -268,7 +242,6 @@ export async function disconnectPush(logout = false) {
   if (logout) owner = null;
   enabled = false;
   checked = 0;
-  notice = '';
   await updateAppBadge(0);
   if (!('caches' in window)) return;
   // Restricted/private browsers may expose CacheStorage but refuse writes.
@@ -309,9 +282,7 @@ document.addEventListener('click', (e) => {
         ? Notification.requestPermission()
         : Promise.resolve(Notification.permission);
     enable(permission);
-  } else if (button.dataset.pushAction === 'test') {
-    testNotification();
-  } else {
+  } else if (button.dataset.pushAction === 'disable') {
     busy = true;
     error = '';
     changed();

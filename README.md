@@ -90,3 +90,22 @@ The village can use the app free of charge. Future commercial licensing and
 multi-village hosting are separate decisions. This is an independent community
 initiative, not an official municipal service. Leaflet retains its bundled BSD license;
 maps are attributed to IGN.
+
+## Hunting zones
+
+Balades offers public, time-limited community hunting reports. Signed-in residents
+can draw a polygon, set a start/end time and optionally add details. Red polygons
+are active; dashed amber polygons are planned. Their author and administrators
+can edit or remove them. Boundary edits support draggable vertices, undo/reset,
+and a keyboard-friendly add-at-map-centre control.
+
+`hunting-state.js` synchronizes with server time and filters expired reports on
+every countdown tick. `hunting-ui.js` refreshes every 10 seconds and on return to
+the app. The same feed populates the overview and full-screen trail maps. Reports
+are not persisted offline; a failed or stale refresh is labelled explicitly,
+including when no zones are known. These reports never certify that an area is safe.
+
+New static modules are included in the build and service-worker cache. Deploy the
+backend hunting-zones migration/API before publishing this frontend. Verify polygon
+creation/editing, author/admin permissions, expired-zone removal and disconnected
+state using disposable local fixtures rather than real danger reports.

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+vendor/
+assets/
+drizzle/
+.sites-runtime/
+package-lock.json
+AUTH_SETUP.md
+*.md
+*.css
+*.html
+manifest.webmanifest
+.openai/

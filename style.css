@@ -97,6 +97,12 @@ input::placeholder,textarea::placeholder{color:#64705c;opacity:1}
 }
 /* Keep large text within the viewport, including native dialog size limits. */
 .modal{max-width:calc(100% - 32px)}
+
+/* Keep modal gestures inside its vertical scroller, including at either end.
+   Leaflet's own touch-action:none still handles dragging and zooming the map. */
+html:has(dialog.modal[open]),body:has(dialog.modal[open]){overflow:hidden;overscroll-behavior:none}
+.modal{overflow-x:hidden;overflow-y:auto;overscroll-behavior:none;touch-action:pan-y pinch-zoom}
+.modal::backdrop{touch-action:none}
 @media(max-width:680px){
   .modal,.modal.wide{max-width:calc(100% - 20px)}
   .topbar{height:auto;min-height:77px;padding-block:12px;flex-wrap:wrap}

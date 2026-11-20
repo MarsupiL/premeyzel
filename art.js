@@ -1,3 +1,5 @@
+import { categoryArt } from './category-art.js';
+
 export function villageArt() {
   return `<img src="./assets/hero-art.svg" width="660" height="410" fetchpriority="high" alt="Prémeyzel : ses maisons de pierre, son église au clocher carré et son four à bois, entre deux montagnes arrondies, avec des vaches et des moutons dans les prés.">`;
 }
@@ -17,7 +19,7 @@ export function cardArt(kind = 'garden') {
     forest: `<path d="M0 168Q190 100 400 172V220H0" fill="#a0b58e"/><path d="m94 27-63 135h126Zm116-13-66 150h132Zm112 29-53 127h107Z" fill="#5c7e5b"/><path d="M94 150v48m116-48v48m112-40v40" stroke="#80704e" stroke-width="7"/><path d="M162 220q90-35 35-68" fill="none" stroke="#e2d2a3" stroke-width="16"/>`,
     mountain: `<path d="M-10 188 117 35 217 176 294 62 413 190" fill="#93aa91"/><path d="m76 85 41-50 36 51-29-15-13 16-17-14Z" fill="#f4f0d9"/><path d="M0 186q216-89 400 0v34H0" fill="#668963"/><path d="m65 203 55-26 65 7 69-27 68 18" stroke="#daccaa" fill="none" stroke-width="6"/>`,
   };
-  return `<svg viewBox="0 0 400 220" aria-hidden="true" focusable="false"><rect width="400" height="220" fill="${kind === 'eggs' || kind === 'tools' ? '#eee5d2' : '#e5ead9'}"/>${content[kind] || content.plant}</svg>`;
+  return `<svg viewBox="0 0 400 220" aria-hidden="true" focusable="false"><rect width="400" height="220" fill="${kind === 'eggs' || kind === 'tools' ? '#eee5d2' : '#e5ead9'}"/>${categoryArt(kind, (name) => content[name]) || content[kind] || content.plant}</svg>`;
 }
 export const ROUTES = [
   'M320 220 C265 250 220 190 180 200 S125 145 167 115 S250 120 286 152 S367 151 390 187 S350 232 320 220',

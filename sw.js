@@ -33,6 +33,7 @@ const FILES = [
   './assets/trails/les-chataignes.json',
   './assets/trails/les-chataignes.gpx',
   './art.js',
+  './category-art.js',
   './style.css',
   './assets/fonts.css',
   './manifest.webmanifest',

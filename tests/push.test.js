@@ -114,6 +114,37 @@ test('test alerts do not change unread badges and open account settings', async 
   await f.click(f.shown[0].data);
   assert.deepEqual(f.opened, ['https://marsupil.github.io/premeyzel/#/compte']);
 });
+test('each new message has its own alert and opens its conversation', async () => {
+  const f = fixture();
+  const second = '41345550-1c65-4aaa-8fbd-ef7eeebc41c2';
+  for (const messageId of [id, second])
+    await f.push({ type: 'message', recipientId: 'alice', conversationId: id, messageId });
+  assert.equal(f.shown.length, 2);
+  assert.notEqual(f.shown[0].tag, f.shown[1].tag);
+  await f.click(f.shown[1].data);
+  assert.equal(f.opened[0], 'https://marsupil.github.io/premeyzel/#/messages?c=' + id);
+});
+test('event alerts show the public title, leave message badges alone and open the event', async () => {
+  const f = fixture();
+  await f.push({
+    type: 'event',
+    recipientId: 'alice',
+    eventId: id,
+    eventTitle: 'La fête du four',
+    unreadCount: 99,
+  });
+  assert.equal(f.shown.length, 1);
+  assert.match(f.shown[0].title, /Nouvel événement/);
+  assert.equal(f.shown[0].body, 'La fête du four');
+  assert.deepEqual(f.badges, []);
+  f.setState({}); // Public events remain accessible after sign-out.
+  await f.click(f.shown[0].data);
+  assert.equal(f.opened[0], 'https://marsupil.github.io/premeyzel/#/evenements?event=' + id);
+  await f.push({ type: 'event', recipientId: 'alice', eventId: 'https://evil.example' });
+  assert.equal(f.shown.length, 1);
+  await f.click({ type: 'event', eventId: '../../evil.example' });
+  assert.equal(f.opened[1], 'https://marsupil.github.io/premeyzel/#/evenements');
+});
 test('missing storage leaves the generic declarative fallback to the browser', async () => {
   const f = fixture({ storageFailure: true });
   await f.push({ type: 'message', recipientId: 'alice', conversationId: id, web_push: 8030 });

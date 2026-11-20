@@ -6,6 +6,10 @@ import { readFileSync } from 'node:fs';
 const source = readFileSync(new URL('../auth.js', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '')
   .replaceAll('export ', '');
+const linkSource = readFileSync(
+  new URL('../notification-links.js', import.meta.url),
+  'utf8',
+).replaceAll('export ', '');
 function fixture({
   callback,
   event,
@@ -65,6 +69,7 @@ function fixture({
     fetch: async () => new Response(JSON.stringify(config)),
     AbortSignal,
     URL,
+    URLSearchParams,
     Response,
     Date,
     setTimeout: (fn) => {
@@ -84,7 +89,9 @@ function fixture({
   };
   vm.createContext(context);
   vm.runInContext(
-    source +
+    linkSource +
+      '\n' +
+      source +
       '\nthis.api={initializeAuth,signIn,signInWithEmail,registerWithEmail,requestPasswordReset,resendConfirmation,updateRecoveredPassword,isPasswordRecovery,signOut,authErrorMessage};',
     context,
   );
@@ -111,6 +118,17 @@ test('email credentials go only to Supabase, preserve passwords, and registratio
   assert.equal(signup.options.emailRedirectTo, 'https://marsupil.github.io/premeyzel/');
   assert.equal(f.storage.size, 0);
   await assert.rejects(f.api.signIn('apple'), /pas disponible/);
+});
+test('Google sign-in returns to the notification conversation instead of the profile', async () => {
+  const target = '#/messages?c=41345550-1c65-4aaa-8fbd-ef7eeebc41c1';
+  const f = fixture({ callback: 'https://marsupil.github.io/premeyzel/' + target });
+  await f.api.initializeAuth(() => {});
+  await f.api.signIn('google');
+  f.location.href = 'https://marsupil.github.io/premeyzel/?code=test-code';
+  await f.api.initializeAuth(() => {});
+  assert.equal(f.location.hash, target);
+  assert.equal(f.location.search, '');
+  assert.equal(f.storage.size, 0);
 });
 test('captures recovery emitted during initialization, removes code, and allows one password update', async () => {
   const f = fixture({

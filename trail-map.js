@@ -1,9 +1,8 @@
 import { createLocationTracker } from './trail-location.js';
 import { createPolygonEditor } from './polygon-editor.js';
 import { zonePhase, zoneCountdown } from './hunting-state.js';
+import { tileURL, MIN_OFFLINE_ZOOM, MAX_OFFLINE_ZOOM } from './trail-offline.js';
 
-const wmts = (layer, matrix) =>
-  `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=${matrix}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
 export function createTrailMap(
   container,
   { trails = [], selectedId, onSelect = () => {}, onOpen = null, tracking = false } = {},
@@ -19,6 +18,7 @@ export function createTrailMap(
       toggleTracking() {},
       setHuntingZones() {},
       focusZone() {},
+      setOfflinePack() {},
       editPolygon() {
         return null;
       },
@@ -27,6 +27,8 @@ export function createTrailMap(
   const map = L.map(container, {
     zoomControl: false,
     scrollWheelZoom: false,
+    // Dialogs can close mid-zoom; avoid a delayed animation touching a removed map.
+    zoomAnimation: false,
     maxZoom: 18,
     minZoom: 6,
   }).setView([45.686, 5.647], 13);
@@ -41,13 +43,15 @@ export function createTrailMap(
   map.attributionControl.setPrefix(
     '<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>',
   );
-  const base = L.tileLayer(wmts('GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2', 'PM_0_19'), {
+  const base = L.tileLayer(tileURL(0), {
+    crossOrigin: 'anonymous',
     maxNativeZoom: 19,
     maxZoom: 18,
     attribution:
       '<a href="https://cartes.gouv.fr" target="_blank" rel="noopener">© IGN · Géoplateforme</a>',
   }).addTo(map);
-  const contours = L.tileLayer(wmts('ELEVATION.CONTOUR.LINE', 'PM_6_18'), {
+  const contours = L.tileLayer(tileURL(1), {
+    crossOrigin: 'anonymous',
     minZoom: 6,
     maxNativeZoom: 18,
     maxZoom: 18,
@@ -99,18 +103,63 @@ export function createTrailMap(
   const status = document.createElement('div');
   status.className = 'trail-map-status';
   status.setAttribute('role', 'status');
-  status.textContent = 'Plan IGN · courbes de niveau';
+  const mapStatus = document.createElement('span'),
+    positionStatus = document.createElement('span');
+  mapStatus.textContent = 'Plan IGN · courbes de niveau';
+  status.append(mapStatus, positionStatus);
   container.append(status);
+  let offlinePack = null,
+    offlineURLs = new Set();
+  const mapLabel = () =>
+    offlinePack ? 'Plan IGN · copie hors ligne' : 'Plan IGN · courbes de niveau';
+  function setOfflinePack(pack) {
+    if (offlinePack?.name === pack?.name) return;
+    offlinePack = pack;
+    offlineURLs = new Set(pack?.urls || []);
+    // Overzoom downloaded tiles instead of asking for missing zooms 17/18.
+    base.options.maxNativeZoom = pack ? MAX_OFFLINE_ZOOM : 19;
+    contours.options.maxNativeZoom = pack ? MAX_OFFLINE_ZOOM : 18;
+    map.setMinZoom(pack ? MIN_OFFLINE_ZOOM : 6);
+    mapStatus.textContent = mapLabel();
+    updateCoverage();
+  }
+  function updateCoverage() {
+    // Do not request unsaved tiles beyond the pack's extent while offline.
+    const bounds =
+      !navigator.onLine && offlinePack ? L.latLngBounds(offlinePack.bounds) : undefined;
+    base.options.bounds = contours.options.bounds = bounds;
+    base.redraw();
+    contours.redraw();
+    mapStatus.textContent = mapLabel();
+  }
+  window.addEventListener('offline', updateCoverage);
+  window.addEventListener('online', updateCoverage);
   let errors = 0,
     loads = 0;
-  const tileError = () => {
+  const tileError = (event) => {
+    if (offlinePack && !navigator.onLine && !offlineURLs.has(event.tile?.src)) return;
     if (++errors > 2)
-      status.textContent = 'Fond de carte indisponible. Vérifiez votre connexion Internet.';
+      mapStatus.textContent = offlinePack
+        ? 'Carte indisponible ici. Hors ligne, restez dans la zone téléchargée.'
+        : 'Fond de carte indisponible. Vérifiez votre connexion Internet.';
   };
   base.on('tileerror', tileError);
   contours.on('tileerror', tileError);
   base.on('tileload', () => {
-    if (++loads > 2 && !tracker.active) status.textContent = 'Plan IGN · courbes de niveau';
+    if (++loads > 2 && !errors) mapStatus.textContent = mapLabel();
+  });
+  base.on('loading', () => {
+    errors = loads = 0;
+  });
+  map.on('moveend', () => {
+    if (
+      !navigator.onLine &&
+      offlinePack &&
+      !L.latLngBounds(offlinePack.bounds).contains(map.getCenter())
+    )
+      mapStatus.textContent =
+        'Hors de la zone téléchargée. Recentrer sur le tracé pour retrouver la carte.';
+    else if (!errors) mapStatus.textContent = mapLabel();
   });
   let layers = L.featureGroup().addTo(map),
     selected = null,
@@ -236,7 +285,7 @@ export function createTrailMap(
       if (follow) map.panTo(latLng);
     },
     onStatus: (s) => {
-      status.textContent = s.message;
+      positionStatus.textContent = s.message;
       locate.textContent = s.active ? 'Arrêter le suivi' : 'Ma position';
       locate.setAttribute('aria-pressed', String(s.active));
       followButton.hidden = !s.active;
@@ -261,6 +310,7 @@ export function createTrailMap(
   setTrails(trails, selectedId);
   return {
     setTrails,
+    setOfflinePack,
     setHuntingZones,
     focusZone(id) {
       const layer = zoneLayers.get(id)?.shape;
@@ -278,6 +328,8 @@ export function createTrailMap(
       tracker.stop();
       clearInterval(staleTimer);
       observer.disconnect();
+      window.removeEventListener('offline', updateCoverage);
+      window.removeEventListener('online', updateCoverage);
       map.remove();
     },
   };

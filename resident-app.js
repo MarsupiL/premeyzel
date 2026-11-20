@@ -940,11 +940,16 @@ function hasActiveInput() {
     route() === 'messages'
   );
 }
-window.addEventListener('online', () => refreshData(!hasActiveInput()));
+window.addEventListener('online', () => {
+  if (!authConfig()) initializeResidentSession();
+  else refreshData(!hasActiveInput());
+});
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && route() === 'trajets') refreshData(!hasActiveInput());
 });
 window.addEventListener('offline', () => {
+  // Do not tear down a map or a GPS watch when mobile reception drops.
+  if (route() === 'balades') return;
   if (hasActiveInput())
     toast('Hors connexion. Votre saisie reste ouverte ; reconnectez-vous pour l’envoyer.');
   else render();
@@ -965,16 +970,29 @@ function handleAuthChange(event, subject) {
   if (event === 'TOKEN_REFRESHED' || (event === 'SIGNED_IN' && !changed)) return;
   refreshData();
 }
-render();
-try {
-  await initializeAuth(handleAuthChange);
-  await refreshData();
-} catch (error) {
-  loading = false;
-  authError = error.message;
-  loadError = error.message;
-  render();
+let initializingSession = null;
+function initializeResidentSession() {
+  if (initializingSession) return initializingSession;
+  initializingSession = (async () => {
+    try {
+      await initializeAuth(handleAuthChange);
+      await refreshData(!hasActiveInput());
+    } catch (error) {
+      loading = false;
+      authError = error.message;
+      loadError = error.message;
+      if (!hasActiveInput()) render();
+    } finally {
+      initializingSession = null;
+    }
+  })();
+  return initializingSession;
 }
+render();
+// Public saved trails work without an auth/config request or a valid token.
+// Authentication resumes normally when connectivity returns.
+if (navigator.onLine) await initializeResidentSession();
+else loading = false;
 setInterval(() => {
   if (
     !document.querySelector('#email-auth-form') &&

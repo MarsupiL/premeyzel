@@ -71,6 +71,7 @@ function notice(message, kind = '') {
   if (root) {
     const el = root.querySelector('.trails-sync');
     el.textContent = message;
+    el.hidden = !message;
     el.className = 'trails-sync notice ' + kind;
   }
 }
@@ -184,11 +185,7 @@ async function refresh(force = false) {
         if (selectedId) await select(selectedId);
       }
     }
-    notice(
-      navigator.onLine
-        ? 'Parcours partagés · les nouvelles publications apparaissent automatiquement.'
-        : 'Hors connexion · copie locale du parcours.',
-    );
+    notice(navigator.onLine ? '' : 'Hors connexion · copie locale du parcours.');
   } catch (error) {
     if (serial !== loadSerial) return;
     notice(
@@ -374,11 +371,7 @@ async function openRoute(id) {
   try {
     const p = await fullTrail(id);
     if (serial !== loadSerial || !root) return;
-    notice(
-      navigator.onLine
-        ? 'Parcours partagés · les nouvelles publications apparaissent automatiquement.'
-        : 'Hors connexion · copie locale du parcours.',
-    );
+    notice(navigator.onLine ? '' : 'Hors connexion · copie locale du parcours.');
     openMap(p);
   } catch (error) {
     notice(error.message, 'warning');

@@ -2,6 +2,7 @@ import { escapeHTML as esc } from './html.js';
 import { normalizeSearch } from './search.js';
 import { parseGPX, trackStats, exportGPX, gpxFilename, MAX_GPX_BYTES } from './gpx.js';
 import { createTrailMap } from './trail-map.js';
+import { mountHunting } from './hunting-ui.js';
 import {
   TRAIL_API,
   fetchTrails,
@@ -24,6 +25,7 @@ let root = null,
   selectedId = null,
   map = null,
   timer = null,
+  hunting = null,
   etag = null,
   loading = false,
   query = '',
@@ -188,7 +190,7 @@ export async function mountTrails(
   activeProfileName = authorName;
   root = element;
   const serial = ++loadSerial;
-  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PRENDRE L’AIR</p><h1>Autour de chez nous</h1><p>Randonnées et VTT, partagés entre habitants.</p></div><div class="button-row trail-page-actions"><button class="btn primary" data-trail="compose">Importer un GPX</button>${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div></div><div class="trails-sync notice" role="status">Chargement des parcours partagés…</div><div class="trail-search-row"><label class="search-box"><span class="sr-only">Rechercher un parcours</span><input id="trail-search" type="search" placeholder="Rechercher un parcours…" value="${esc(query)}"></label><button class="btn secondary" data-trail="refresh">Actualiser</button></div><div class="filters" aria-label="Type de parcours">${['Tout', 'Randonnée', 'VTT'].map((value) => `<button class="chip ${value === filter ? 'selected' : ''}" aria-pressed="${value === filter}" data-trail="filter" data-value="${value}">${value}</button>`).join('')}</div><p id="trail-results" class="results-count"></p><div class="trails-layout real-trails"><div id="shared-trail-list" class="trail-list"></div><section class="map-panel"><div id="shared-trail-map" class="real-trail-map" role="region" aria-label="Carte IGN des parcours avec courbes de niveau"></div><div id="selected-trail" class="selected-trail"></div></section></div><p class="trail-help">Cliquez sur un tracé pour l’ouvrir en plein écran. En plein écran, activez « Ma position » pour suivre votre progression. Le fond IGN et ses courbes de niveau nécessitent Internet.</p>${residentMode ? '' : '<p class="fine">L’administration permet de modifier ou retirer tous les parcours après connexion avec le compte administrateur. Les autres rubriques du pilote restent en démonstration locale.</p>'}`;
+  root.innerHTML = `<div class="page-heading"><div><p class="eyebrow">PRENDRE L’AIR</p><h1>Autour de chez nous</h1><p>Randonnées et VTT, partagés entre habitants.</p></div><div class="button-row trail-page-actions"><button class="btn primary" data-trail="compose">Importer un GPX</button>${residentMode ? '' : '<a class="btn secondary" href="' + TRAIL_API + '/admin" target="_blank" rel="noopener">Administration des parcours</a>'}</div></div><div class="trails-sync notice" role="status">Chargement des parcours partagés…</div><div class="trail-search-row"><label class="search-box"><span class="sr-only">Rechercher un parcours</span><input id="trail-search" type="search" placeholder="Rechercher un parcours…" value="${esc(query)}"></label><button class="btn secondary" data-trail="refresh">Actualiser</button></div><div class="filters" aria-label="Type de parcours">${['Tout', 'Randonnée', 'VTT'].map((value) => `<button class="chip ${value === filter ? 'selected' : ''}" aria-pressed="${value === filter}" data-trail="filter" data-value="${value}">${value}</button>`).join('')}</div><p id="trail-results" class="results-count"></p><div id="hunting-zones"></div><div class="trails-layout real-trails"><div id="shared-trail-list" class="trail-list"></div><section class="map-panel"><div id="shared-trail-map" class="real-trail-map" role="region" aria-label="Carte IGN des parcours avec courbes de niveau"></div><div id="selected-trail" class="selected-trail"></div></section></div><p class="trail-help">Cliquez sur un tracé pour l’ouvrir en plein écran. En plein écran, activez « Ma position » pour suivre votre progression. Le fond IGN et ses courbes de niveau nécessitent Internet.</p>${residentMode ? '' : '<p class="fine">L’administration permet de modifier ou retirer tous les parcours après connexion avec le compte administrateur. Les autres rubriques du pilote restent en démonstration locale.</p>'}`;
   root.addEventListener('click', handleClick);
   root.querySelector('#trail-search').addEventListener('input', (e) => {
     query = e.target.value;
@@ -223,6 +225,8 @@ export async function mountTrails(
     onSelect: select,
     onOpen: (id) => openRoute(id),
   });
+  hunting = mountHunting(root.querySelector('#hunting-zones'), { account, onRequireAuth, dialog });
+  hunting.attachMap(map);
   refresh(true);
   timer = setInterval(() => {
     if (!document.hidden && navigator.onLine) refresh();
@@ -237,6 +241,8 @@ export function unmountTrails() {
   loading = false;
   if (timer) clearInterval(timer);
   timer = null;
+  hunting?.destroy();
+  hunting = null;
   map?.destroy();
   map = null;
   for (const dialog of [...dialogs]) dialog.closeView();
@@ -253,7 +259,7 @@ async function handleClick(event) {
   const { trail: action, id, value } = button.dataset;
   try {
     if (action === 'compose') composeTrail();
-    if (action === 'refresh') await refresh(true);
+    if (action === 'refresh') await Promise.all([refresh(true), hunting?.refresh()]);
     if (action === 'filter') {
       filter = value;
       for (const b of root.querySelectorAll('[data-trail="filter"]')) {
@@ -277,6 +283,7 @@ function dialog(title, body, fullscreen = false) {
   d.setAttribute('aria-label', title);
   d.innerHTML = `<header class="modal-header"><h2>${esc(title)}</h2><button class="icon-button" type="button" data-trail-close aria-label="Fermer">✕</button></header><div class="modal-body">${body}</div>`;
   d.closeView = () => {
+    if (!d.isConnected) return;
     d.onCleanup?.();
     d.close();
     d.remove();
@@ -347,7 +354,11 @@ function openMap(p) {
     selectedId: p.id,
     tracking: true,
   });
-  d.onCleanup = () => fullMap.destroy();
+  const detachHunting = hunting?.attachMap(fullMap);
+  d.onCleanup = () => {
+    detachHunting?.();
+    fullMap.destroy();
+  };
   d.querySelector('[data-export]').onclick = () => downloadGPX(p);
   d.querySelector('[data-share]').onclick = () => shareGPX(p, d.querySelector('.share-status'));
   if (own) {

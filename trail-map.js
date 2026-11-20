@@ -1,4 +1,6 @@
 import { createLocationTracker } from './trail-location.js';
+import { createPolygonEditor } from './polygon-editor.js';
+import { zonePhase, zoneCountdown } from './hunting-state.js';
 
 const wmts = (layer, matrix) =>
   `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${layer}&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=${matrix}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`;
@@ -10,7 +12,17 @@ export function createTrailMap(
   const L = globalThis.L;
   if (!L) {
     container.textContent = 'La carte est indisponible. Vous pouvez toujours télécharger le GPX.';
-    return { destroy() {}, setTrails() {}, fit() {}, toggleTracking() {} };
+    return {
+      destroy() {},
+      setTrails() {},
+      fit() {},
+      toggleTracking() {},
+      setHuntingZones() {},
+      focusZone() {},
+      editPolygon() {
+        return null;
+      },
+    };
   }
   const map = L.map(container, {
     zoomControl: false,
@@ -41,6 +53,49 @@ export function createTrailMap(
     maxZoom: 18,
     opacity: 0.72,
   }).addTo(map);
+  map.createPane('hunting');
+  map.getPane('hunting').style.zIndex = '390';
+  const huntingLayers = L.featureGroup().addTo(map),
+    zoneLayers = new Map();
+  let zoneSignature = '',
+    editor = null;
+  const huntingNote = document.createElement('div');
+  huntingNote.className = 'hunting-map-note';
+  huntingNote.hidden = true;
+  container.append(huntingNote);
+  L.DomEvent.disableClickPropagation(huntingNote);
+  function setHuntingZones(zones, now, stale, onZone) {
+    const visible = zones.filter((z) => zonePhase(z, now) !== 'expired');
+    const signature = visible.map((z) => `${z.id}:${z.revision}:${zonePhase(z, now)}`).join('|');
+    huntingNote.hidden = false;
+    huntingNote.classList.toggle('stale', stale);
+    const active = visible.filter((z) => zonePhase(z, now) === 'active').length;
+    huntingNote.textContent = stale
+      ? 'Chasse : informations non actualisées'
+      : `${active} zone${active > 1 ? 's' : ''} de chasse en cours${visible.length > active ? ` · ${visible.length - active} prévue(s)` : ''}`;
+    if (signature !== zoneSignature) {
+      zoneSignature = signature;
+      huntingLayers.clearLayers();
+      zoneLayers.clear();
+      for (const zone of visible) {
+        const planned = zonePhase(zone, now) === 'planned';
+        const label = document.createElement('span');
+        const shape = L.polygon(zone.polygon, {
+          pane: 'hunting',
+          color: planned ? '#995c0d' : '#bd3324',
+          weight: 3,
+          fillOpacity: planned ? 0.12 : 0.26,
+          dashArray: planned ? '7 6' : null,
+        })
+          .addTo(huntingLayers)
+          .bindTooltip(label);
+        shape.on('click', () => onZone?.(zone.id));
+        zoneLayers.set(zone.id, { shape, label });
+      }
+    }
+    for (const zone of visible)
+      zoneLayers.get(zone.id).label.textContent = `${zone.title} · ${zoneCountdown(zone, now)}`;
+  }
   const status = document.createElement('div');
   status.className = 'trail-map-status';
   status.setAttribute('role', 'status');
@@ -206,9 +261,20 @@ export function createTrailMap(
   setTrails(trails, selectedId);
   return {
     setTrails,
+    setHuntingZones,
+    focusZone(id) {
+      const layer = zoneLayers.get(id)?.shape;
+      if (layer) map.fitBounds(layer.getBounds(), { padding: [35, 70], maxZoom: 16 });
+    },
+    editPolygon(options) {
+      editor?.destroy();
+      editor = createPolygonEditor(map, options);
+      return editor;
+    },
     fit,
     toggleTracking: () => locate.click(),
     destroy() {
+      editor?.destroy();
       tracker.stop();
       clearInterval(staleTimer);
       observer.disconnect();

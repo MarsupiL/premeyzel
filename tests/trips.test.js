@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parisDateTime, selectTrips, tripFields, tripDetail, tripsPage } from '../trips.js';
+import {
+  parisDateTime,
+  selectTrips,
+  tripFields,
+  tripDetail,
+  tripsPage,
+  recurrenceText,
+  tripInput,
+} from '../trips.js';
 
 test('rides use Paris time and sort/filter departures without changing the source', () => {
   const now = new Date('2026-11-20T10:00:00Z');
@@ -12,6 +20,7 @@ test('rides use Paris time and sort/filter departures without changing the sourc
       destination: 'Chambéry',
       authorName: 'Alice',
       date: '2026-11-21T12:00',
+      departureAt: Date.parse('2026-11-21T11:00Z'),
       rideType: 'offer',
     },
     {
@@ -19,6 +28,7 @@ test('rides use Paris time and sort/filter departures without changing the sourc
       destination: 'Belley',
       authorName: 'Bob',
       date: '2026-11-20T12:00',
+      departureAt: Date.parse('2026-11-20T11:00Z'),
       rideType: 'request',
     },
     {
@@ -26,6 +36,7 @@ test('rides use Paris time and sort/filter departures without changing the sourc
       destination: 'Culoz',
       authorName: 'Chloé',
       date: '2026-11-20T10:59',
+      departureAt: Date.parse('2026-11-20T09:59Z'),
       rideType: 'offer',
     },
   ];
@@ -33,7 +44,7 @@ test('rides use Paris time and sort/filter departures without changing the sourc
   assert.deepEqual(ids('Tout'), ['b', 'a']);
   assert.deepEqual(ids('Propositions'), ['a']);
   assert.deepEqual(ids('Recherches'), ['b']);
-  assert.deepEqual(ids('Passés'), ['c']);
+  assert.deepEqual(selectTrips(rides, 'Tout', '', new Date('2026-11-21T11:00Z')), []);
   assert.deepEqual(ids('Tout', 'chambery'), ['a']);
   assert.deepEqual(ids('Tout', 'BOB'), ['b']);
   assert.deepEqual(
@@ -48,6 +59,7 @@ test('ride cards, details and form escape user text and keep publishing to the r
     destination: '<img src=x onerror=alert(1)>',
     authorName: '<script>bad()</script>',
     date: '2099-06-01T08:30',
+    departureAt: Date.parse('2099-06-01T06:30Z'),
     rideType: 'request',
   };
   for (const html of [
@@ -64,4 +76,36 @@ test('ride cards, details and form escape user text and keep publishing to the r
   assert.match(fields, /name="date"/);
   assert.match(fields, /name="tripTime"/);
   assert.doesNotMatch(fields, /name="(title|location|contact|photo|capacity)"/);
+});
+
+test('regular rides preserve their original start date and independent day frequencies', () => {
+  const data = new FormData();
+  for (const [key, value] of Object.entries({
+    destination: 'Belley',
+    rideType: 'request',
+    schedule: 'regular',
+    date: '2026-11-23',
+    tripTime: '08:30',
+    'repeat-1': '1',
+    'repeat-5': '2',
+    until: '2026-12-31',
+  }))
+    data.set(key, value);
+  assert.throws(() => tripInput(data), /au moins un jour/);
+  data.append('rideDays', '1');
+  data.append('rideDays', '5');
+  const input = tripInput(data);
+  assert.deepEqual(input.recurrence, {
+    days: [
+      { day: 1, every: 1 },
+      { day: 5, every: 2 },
+    ],
+    until: '2026-12-31',
+  });
+  assert.equal(recurrenceText(input), 'Chaque lundi · Un vendredi sur deux');
+  const fields = tripFields({ ...input, startsOn: '2026-11-23', date: '2026-12-07T08:30' });
+  assert.match(fields, /value="2026-11-23"/);
+  assert.match(fields, /name="schedule" value="regular" checked/);
+  data.set('schedule', 'once');
+  assert.equal(tripInput(data).recurrence, null);
 });

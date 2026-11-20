@@ -31,6 +31,7 @@ const FILES = [
   './assets/fonts.css',
   './manifest.webmanifest',
   './assets/icon.svg',
+  './assets/hero-art.svg',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon-maskable.png',

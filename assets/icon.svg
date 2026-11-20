@@ -1,1 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="116" fill="#284f3c"/><path d="M90 340 207 213 272 280 343 184 434 340" fill="none" stroke="#d8e3b9" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/><path d="M191 351V245l65-58 65 58v106" fill="#f7f3e9"/><path d="M223 351v-68h65v68" fill="#c3764f"/><circle cx="143" cy="160" r="25" fill="#eac776"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Prémeyzel</title>
+  <desc id="desc">Deux collines arrondies, le clocher carré de l’église, le four à bois et les animaux des prés.</desc>
+  <rect width="512" height="512" rx="116" fill="#284f3c"/>
+  <circle cx="347" cy="126" r="24" fill="#eac776"/>
+  <path d="M67 286c12-78 44-137 94-137 49 0 75 65 113 87v104H67Z" fill="#789563"/>
+  <path d="M220 269c31-52 56-102 108-102 55 0 94 46 117 100v73H220Z" fill="#9eb18a"/>
+  <path d="M285 224q39-31 76-12t52 42" fill="none" stroke="#d8d5af" stroke-width="8" stroke-linecap="round"/>
+  <path d="M72 331q101-49 187-16t181-5v61q-182 56-368 0Z" fill="#486d50"/>
+  <!-- Square bell tower, long stone nave and stepped gables. -->
+  <path d="M276 316V175h45v141Z" fill="#e7dcc0"/><path d="M312 175h9v141h-9Z" fill="#c6b895"/>
+  <path d="M272 179v-16h9v7h9v-7h9v7h9v-7h10v7h7v9Z" fill="#f2e8cc"/>
+  <path d="M286 218v-18a4 4 0 0 1 8 0v18Zm13 0v-18a4 4 0 0 1 8 0v18Z" fill="#756850"/>
+  <path d="M279 229h38" stroke="#b7a786" stroke-width="3"/>
+  <path d="M206 262h85v64h-85Z" fill="#f1e7cb"/><path d="m195 263 22-39h65l23 39Z" fill="#a09173"/>
+  <path d="m197 263 0-8h5v-8h5v-8h5v-8h6v-7m65 0v8h5v8h5v8h5v8h5v8" fill="none" stroke="#e7dcc0" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M222 300v-16a4 4 0 0 1 8 0v16Zm22 0v-16a4 4 0 0 1 8 0v16Zm22 0v-16a4 4 0 0 1 8 0v16Z" fill="#897b60"/>
+  <path d="M290 319v-22q8-14 16 0v22Z" fill="#756850"/>
+  <!-- Stepped stone oven with its broad arched shelter. -->
+  <path d="M119 329v-50h9v-10h9v-10h9v-10h12v10h9v10h9v10h9v50Z" fill="#dfcba5"/>
+  <path d="M133 329v-30a19 19 0 0 1 38 0v30Z" fill="#756850"/><path d="M141 326v-16a11 11 0 0 1 22 0v16Z" fill="#463e32"/>
+  <path d="M147 322q-5-7 2-14 0 7 5 5l2-5q8 11 0 14Z" fill="#c98750"/><path d="M115 331h74" stroke="#bca987" stroke-width="5" stroke-linecap="round"/>
+  <path d="M338 320v-46h42v46Z" fill="#e7dcc0"/><path d="m329 275 18-28h28l18 28Z" fill="#b97957"/><path d="M348 289h8v12h-8Zm17 0h8v12h-8Z" fill="#668071"/>
+  <path d="M91 349q81-21 151 2t178-8" fill="none" stroke="#91a877" stroke-width="5" stroke-linecap="round"/>
+  <!-- A compact echo of the hero's grazing animals. -->
+  <g transform="translate(302 347)">
+    <path d="M4 20v19m17-17v17m25-19v19m15-22v22" stroke="#d9c7a4" stroke-width="5" stroke-linecap="round"/>
+    <path d="M4 3q18-6 41 0l10 5 9-7 12 7-3 19H59l-9-3q-24 9-46 0Z" fill="#f3e7c8"/>
+    <path d="M10 2q13-4 21-1l-3 16-17 3Zm33 0 10 6-2 13-10 7-7-9Z" fill="#ad7952"/>
+    <path d="m58 8-8-8 12 2m7 3 13-3-7 11" fill="#ad7952"/><path d="M63 6q14 0 12 17H61Z" fill="#ad7952"/><ellipse cx="68" cy="25" rx="9" ry="5" fill="#ddc29f"/>
+  </g>
+  <g transform="translate(156 355)">
+    <path d="M9 20v17m22-17v17" stroke="#d9c7a4" stroke-width="4" stroke-linecap="round"/>
+    <path d="M1 9Q0 1 10 0q9-5 16 0 12-1 14 11 3 12-10 15-8 5-17 0Q0 27 1 9Z" fill="#f3e7c8"/>
+    <path d="m31 6 11 1 2 15q-7 9-12-1Z" fill="#a18c6b"/><path d="m32 10-7-5m15 5 7-4" stroke="#a18c6b" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <path d="M226 401q62-30 34-51" fill="none" stroke="#d8c79b" stroke-width="10" stroke-linecap="round"/>
+</svg>

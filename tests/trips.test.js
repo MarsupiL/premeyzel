@@ -159,3 +159,42 @@ test('offer forms submit seats, including zero, while switching to a request cle
   data.set('rideType', 'request');
   assert.equal(tripInput(data).seats, null);
 });
+
+test('date-filtered rides keep destination/type filters and show the selected occurrence', () => {
+  const ride = {
+    id: 'ride',
+    destination: 'Belley',
+    authorName: 'Alice',
+    rideType: 'offer',
+    seats: 3,
+    date: '2099-12-11T08:30',
+    departureAt: Date.parse('2099-12-11T07:30Z'),
+    recurrence: { days: [{ day: 5, every: 2 }], until: null },
+  };
+  const html = tripsPage([ride], {
+    filter: 'Propositions',
+    query: 'belley',
+    date: '2099-12-11',
+    loading: false,
+  });
+  assert.match(html, /id="trip-date-filter"[^>]*value="2099-12-11"/);
+  assert.match(html, /Toutes les dates/);
+  assert.match(html, /Départ sélectionné/);
+  assert.match(html, /11 décembre 2099/);
+  assert.match(html, /3 places disponibles/);
+  assert.doesNotMatch(html, /Prochain départ/);
+  assert.match(tripDetail(ride, '2099-12-11'), /Départ sélectionné/);
+  for (const options of [
+    { filter: 'Recherches', query: '' },
+    { filter: 'Tout', query: 'Paris' },
+  ]) {
+    const empty = tripsPage([ride], { ...options, date: '2099-12-11', loading: false });
+    assert.match(empty, /Aucun trajet ne correspond/);
+    assert.match(empty, /Effacer la recherche et les filtres/);
+    assert.doesNotMatch(empty, /<article class="ride-card"/);
+  }
+  assert.match(
+    tripsPage([], { filter: 'Tout', query: '', date: '2099-12-11', loading: true }),
+    /Chargement des trajets/,
+  );
+});

@@ -13,6 +13,7 @@ function fixture({
   subscribed = false,
   permission = 'default',
   pushSupported = true,
+  onWrite = async () => {},
 } = {}) {
   let stored = saved,
     sub = subscribed ? subscription() : null,
@@ -60,7 +61,9 @@ function fixture({
           return new Response(JSON.stringify(stored));
         },
         async put(url, response) {
-          stored = await response.json();
+          const value = await response.json();
+          await onWrite(value);
+          stored = value;
         },
       };
     },
@@ -226,4 +229,46 @@ test('browsers without Push API can still sign out normally', async () => {
   assert.match(f.section.innerHTML, /pas disponibles dans ce navigateur/);
   await f.api.disconnectPush(true);
   assert.equal(f.sub, null);
+});
+
+const deferred = () => {
+  let resolve;
+  const promise = new Promise((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+};
+test('switching accounts while permission is pending never opts in the new account and reloads its settings', async () => {
+  const f = fixture(),
+    permission = deferred();
+  await f.api.syncPushAccount({ id: 'alice' });
+  const enabling = f.api.enable(permission.promise);
+  await f.api.syncPushAccount({ id: 'bob' });
+  permission.resolve('granted');
+  await enabling;
+  for (let n = 0; n < 20; n++) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(f.sub, null);
+  assert.ok(!f.calls.some((c) => c.options?.method === 'PUT'));
+  assert.match(f.section.innerHTML, /data-push-action="enable" >Activer/);
+});
+test('logout waits for a delayed opt-in storage write and leaves notifications disabled', async () => {
+  const writing = deferred(),
+    release = deferred();
+  const f = fixture({
+    onWrite: async (value) => {
+      if (value.owner === 'alice') {
+        writing.resolve();
+        await release.promise;
+      }
+    },
+  });
+  await f.api.syncPushAccount({ id: 'alice' });
+  const enabling = f.api.enable(Promise.resolve('granted'));
+  await writing.promise;
+  const logout = f.api.disconnectPush(true);
+  release.resolve();
+  await Promise.all([enabling, logout]);
+  assert.deepEqual(f.stored, {});
+  assert.equal(f.sub, null);
+  assert.doesNotMatch(f.section.innerHTML, /Activées sur cet appareil/);
 });

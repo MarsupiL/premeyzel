@@ -237,3 +237,23 @@ test('a failed date search stops loading and can be retried', async () => {
   assert.equal(f.api.state().loadError, '');
   assert.equal(f.api.state().filteredTrips[0].id, 'recovered');
 });
+
+test('temporary account-service failures retain the current session and private drafts; rejected sessions clear them', async () => {
+  const f = fixture();
+  f.setAccount(async () => ({ id: 'alice', role: 'member' }));
+  f.setPages(async (path) => (path.includes('ads') ? [{ title: 'Alice ad' }] : []));
+  await f.api.refreshData();
+  f.setAccount(async () => {
+    throw Object.assign(new Error('Service unavailable'), { status: 503 });
+  });
+  await f.api.refreshData(false);
+  assert.equal(f.api.state().user.id, 'alice');
+  assert.equal(f.api.state().ads.length, 1);
+  assert.equal(f.api.state().loadError, 'Service unavailable');
+  f.setAccount(async () => {
+    throw Object.assign(new Error('Session expired'), { status: 401 });
+  });
+  await f.api.refreshData(false);
+  assert.equal(f.api.state().user, null);
+  assert.equal(f.api.state().ads.length, 0);
+});

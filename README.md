@@ -18,7 +18,11 @@ Google and email/password authentication; the backend owns roles and shared data
   owner's role is protected. All authorization is checked again on the server.
 - GPX import/export, IGN maps with contours, fullscreen viewing and opt-in GPS tracking.
   GPS stays on the device. Map tiles and publication require Internet.
-- Apple login and rides are not currently offered.
+- Signed-in residents can offer or request a ride with a destination, date and time.
+  Trips use Europe/Paris time, sort upcoming departures first and link to private messages.
+  Expired rides disappear. Regular rides have a weekly or fortnightly rule per weekday,
+  anchored to their start date, with an optional end date; the server returns the next departure.
+- Apple login is not currently offered.
 
 ## Development and checks
 

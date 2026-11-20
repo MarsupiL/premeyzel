@@ -8,6 +8,7 @@ const files = [
   'informations.css',
   'start.js',
   'resident-app.js',
+  'trips.js',
   'messages-ui.js',
   'search.js',
   'html.js',

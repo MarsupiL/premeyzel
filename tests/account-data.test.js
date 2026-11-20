@@ -33,6 +33,7 @@ function fixture() {
     allPages: (...args) => pages(...args),
     authConfig: () => ({ accountsEnabled: true }),
     clearPhotos() {},
+    clearFeedbackDraft() {},
     closeModal() {},
     setMessagingAccount() {},
     setTrailAccount() {},

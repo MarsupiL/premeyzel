@@ -19,7 +19,7 @@ function fixture({failSend=false}={}){
   calls.push({path,options});if(path.endsWith('/messages')){if(failSend)throw Error('Test connection failed');return {message};}
   return {peer:{name:'Alice'},messages:[message],nextBefore:null};
  },allPages:async()=>[],rootFixture:{querySelector:s=>nodes[s]},uiFixture:{avatar:()=>'',loadPhotos(){}}};
- vm.createContext(context);vm.runInContext(source+`\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={renderFeed,renderList,onSubmit,getDraft:()=>drafts.get('test')};`,context);
+ vm.createContext(context);vm.runInContext(source+`\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={renderFeed,renderList,onSubmit,onClick,setDirectory:fn=>directory=fn,getDraft:()=>drafts.get('test')};`,context);
  return {api:context.api,feed,list,textarea,button,error,document,focus,calls,writes:()=>writes,submit:()=>context.api.onSubmit({target:form,preventDefault(){}})};
 }
 
@@ -42,4 +42,11 @@ test('successful send clears the draft and restores focus only after enabling th
 });
 test('failed send retains the message and retry ID, enables the composer and focuses the error',async()=>{
  const f=fixture({failSend:true});await f.submit();assert.equal(f.textarea.value,'Bonjour Alice');assert.equal(f.api.getDraft().key,'retry-id');assert.equal(f.textarea.disabled,false);assert.equal(f.button.disabled,false);assert.equal(f.document.activeElement,f.error);
+});
+test('opening the directory keeps its trigger focusable and ignores repeated clicks while loading',async()=>{
+ const f=fixture(),attrs=new Map();let complete,opens=0;
+ f.api.setDirectory(()=>{opens++;return new Promise(resolve=>complete=resolve);});
+ const trigger={dataset:{dm:'new'},disabled:false,getAttribute:k=>attrs.get(k),setAttribute:(k,v)=>attrs.set(k,v),removeAttribute:k=>attrs.delete(k)},event={target:{closest:()=>trigger}};
+ const opening=f.api.onClick(event);assert.equal(trigger.disabled,false);assert.equal(attrs.get('aria-busy'),'true');
+ await f.api.onClick(event);assert.equal(opens,1);complete();await opening;assert.equal(attrs.has('aria-busy'),false);
 });

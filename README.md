@@ -1,62 +1,81 @@
 # Prémeyzel · Entre voisins
 
-French, mobile-first PWA pilot for village events, shared rides, advertisements and walking/MTB routes. The frontend is hosted on GitHub Pages. GPX routes use a shared D1/R2 backend; events, rides, ads, messages and demo profiles remain browser-local simulations. No analytics or external fonts are loaded.
+A community PWA for Prémeyzel, hosted at https://marsupil.github.io/premeyzel/.
+The static frontend connects to the separate `premeyzel-api` Worker. Supabase handles
+Google and email/password authentication; the backend owns roles and shared data.
 
-## Try it
+## Current features
 
-Switch between the resident demo profiles, Camille (admin), and Visitor using the profile button. Publish an event, request a ride, contact an advertiser, or manage reports. Switch to the other demo resident to respond. Outside the Balades section, changes persist only in this browser. Reset restores the examples, including La fête du four on 31 October 2026. Published content additions are merged once into existing browser data without overwriting edits, deletions or activity.
+- Public events and hiking/MTB trails; ads and resident profiles require sign-in.
+- Events support household registration, capacity limits and a FIFO whole-group waitlist.
+- Ads support renting, lending, gifts, exchanges, services, wanted items, sales and lost/found.
+- Profiles contain a name and optional photo. Contact details are not public profile fields.
+- Private conversations are accessible only to their two participants, including when an
+  administrator signs in. Optional push alerts hide message text and sender identity.
+- Members manage their own content. Administrators manage all content and roles; the
+  owner's role is protected. All authorization is checked again on the server.
+- GPX import/export, IGN maps with contours, fullscreen viewing and opt-in GPS tracking.
+  GPS stays on the device. Map tiles and publication require Internet.
+- Apple login and rides are not currently offered.
 
-Visitors see events and trails; members also see rides and ads. This is a **UI simulation, not authentication or access control**: all demo data is included in the static source. Do not enter real personal data.
+## Development and checks
 
-## Product rules
-
-- All members publish immediately. Authors edit/delete their own posts; admins edit/delete any post. Reports do not hide posts.
-- Events may have a date with the time still to be confirmed. La fête du four directs bread orders and offers of help to JP or Marie; demo registrations do not place an order. Events support household registrations, capacity, and a strict FIFO whole-group waiting list. Cancelling a registration promotes waiting groups when sufficient room is available.
-- Drivers confirm requests; pending requests do not consume capacity. Acceptance checks available seats. Only the driver decides bookings. Weekly trip creation generates four individually bookable departures. Cancel one departure or all future departures in the series.
-- Deleting a booked event/trip cancels affected registrations/requests and creates local notifications; cancellation history remains in My activity.
-- Publications accept one optional JPEG, PNG or WebP photo (up to 10 MiB). Photos are resized to at most 1280 pixels and re-encoded locally, without source metadata, to fit the browser storage budget. The current illustrations act as sample photos; removing a photo restores an automatic illustration. Event/ad photos persist only in this browser, including offline. Shared-route photos are uploaded to R2. If storage is full or unavailable, publishing fails visibly and keeps the draft open without altering the saved post. Reset removes local photos along with other local changes.
-- Ads include renting, lending, gifts, barter, services, selling, and lost/found. Rentals show a rate; dates, conditions, and any payment are arranged between people. No payments in the pilot.
-- Conversations are displayed only to their participants, including when using the admin profile. Event registration lists and ride request identities are shown to the organiser/driver.
-- Balades imports GPX tracks/routes up to 5 MiB and 20,000 points. Choose Randonnée or VTT; publication is immediately saved for all visitors. New trails automatically use the active village profile’s first name; visitors appear as “un habitant”. There is no manual name field. Editing preserves the original attribution, including when a different demo profile or an administrator edits the route. The description is optional. Village profiles are still simulations; the separate ChatGPT admin login controls backend administration, not the selected village profile. Ownership uses the browser management key, never the displayed name. Les châtaignes is a randonnée with 367 points, 9.11 km and 343 m ascent, calculated from the supplied elevations. Its 313 m endpoint gap is preserved.
-- Maps use bundled Leaflet 1.9.4 and IGN Plan + contour-line tiles. Click a route to open the full-screen map, export/share GPX or explicitly enable location tracking. GPS remains on-device and stops when the view closes. Map tiles require Internet.
-- Each anonymous author has a random management key stored in their browser. Others cannot edit/delete their routes. Clearing browser storage or switching devices loses this ownership access; Mathias can manage any route through the backend’s authenticated administrator page. Open **Administration des parcours** at the top of Balades (also available from a full-screen route or the Administration dashboard), sign in with the authorized ChatGPT account, then choose **Modifier** or **Retirer** beside a route. Removal asks for confirmation and hides the route for everyone. Demo Camille has no backend privileges.
-- Route lists refresh every 10 seconds while visible; previously consulted full tracks can be exported offline. Recording times and extra GPX metadata are not published. Named waypoints, geometry, segment boundaries and elevations are retained.
-- Installation and offline app shell work through a manifest and service worker. There are no real email, SMS or push notifications. Only routes have cross-device updates.
-
-## Development
-
-Requires Node 22+ and Python 3 for the convenience preview command. No npm dependencies are required.
+Use Node 24 or later, and install the exact lockfile before working:
 
 ```sh
-npm test
-npm run build
+npm ci
+npm run check
 npm run dev
 ```
 
-Open http://localhost:4177/dist/. Browser-native GPX parser checks are at http://localhost:4177/tests/browser-gpx.html. Static production files are written to `dist/`. URLs are relative so deployment works at a GitHub project path.
+Open http://localhost:4177/dist/ after building. `npm run dev` uses Python 3 and binds
+only to loopback. Browser-native GPX parser checks are in `tests/browser-gpx.html`.
+Do not use a production account for automated mutation tests.
 
-The GitHub Actions workflow builds, tests and deploys `dist/`. Set repository **Settings → Pages → Source → GitHub Actions**. Village artwork is original local code; Leaflet is distributed under its bundled BSD license and maps are attributed to IGN. No source license is granted by this prototype; commercial licensing can be decided separately.
+`npm run check` runs ESLint, formatting checks, regression tests and the production
+build. `npm run format` applies the shared style. Tests cover authentication flows,
+session changes, message pagination, push privacy, photo handling and GPS lifecycle.
+Some model/photo tests retain historical pilot scenarios; those do not exercise the
+production API. Server permissions and transactions are tested in `premeyzel-api`.
 
-## Structure and future service
+GitHub Actions runs these checks before deploying `dist/` to Pages. Source changes to
+both repositories must deploy the backend first when new API capabilities are needed.
+The message catch-up cursor introduced in this review is one such capability.
 
-- `model.js`: demo seed data, business rules, configurable village identity and storage key.
-- `app.js`: UI, local persistence, routes, notifications and form interactions.
-- `photos.js`: photo validation, local resizing and sample image sources.
-- `art.js`: original SVG illustrations.
-- `gpx.js`, `trail-map.js`, `trail-location.js`: GPX geometry, IGN maps and location lifecycle.
-- `trail-api.js`, `trails-ui.js`: shared-route storage client and interfaces.
-- `assets/trails/`: canonical seed GPX and JSON.
-- `vendor/leaflet/`: bundled map library and license.
-- `style.css`: responsive layout and visual design.
-- `sw.js`: offline shell; build generates a content-based cache version.
-- `tests/`: model invariants and lifecycle regression checks.
+## Source map
 
-The shared-route backend is https://premeyzel-parcours.mathias790372.chatgpt.site (administration at `/admin`). Its source is maintained in the separate `premeyzel-api` checkout. Migrating the other sections requires real resident accounts, server-side booking transactions, privacy/retention decisions and automated backups. Routes are supplied by contributors and have no independent terrain verification. Future villages can be supported through configuration and deployment; no multi-village accounts or billing are implemented.
+- `start.js`: service-worker update coordination and resident-app startup.
+- `resident-app.js`: navigation, profiles, posts, event registration and administration.
+- `auth.js`, `auth-ui.js`: Supabase integration and account forms. The SDK is bundled
+  locally; provider secrets and passwords are never stored in application source.
+- `api-client.js`: session-scoped requests, cancellation, timeouts and pagination.
+- `messages-ui.js`, `push-ui.js`: messaging and per-device notification opt-in.
+- `gpx.js`, `trail-map.js`, `trail-location.js`: geometry, maps and GPS lifecycle.
+- `trail-api.js`, `trails-ui.js`: shared-trail API adapters and interface.
+- `html.js`, `search.js`, `photos.js`: shared escaping, French search and image helpers.
+- `sw.js`: offline app shell and generic push notifications. Build output contains a
+  content-derived cache name. Private API responses are not added to that cache.
+- `art.js`, `icons.js`, `assets/`, `vendor/leaflet/`: visual assets and bundled map library.
 
-Prémeyzel uses the service free of charge. Selling a future version to other villages remains an option. This prototype is independent and is not presented as an official municipal service.
+`app.js` and `model.js` preserve the historical local demo and its regression scenarios.
+They are excluded from the production build and precache. Failed live requests do not
+switch users into fictional demo profiles or content. Legacy trail-claim support remains
+available to residents who still possess their original browser ownership key.
 
-## Real-account version (awaiting provider setup)
+## Security and operations
 
-`start.js` selects the resident interface only when the backend returns `accountsEnabled: true`. Until provider setup and activation, the existing pilot is retained. Preview the new sign-in page with `?accounts-preview=1#/connexion`. See [AUTH_SETUP.md](AUTH_SETUP.md) for exact Google, Apple and Supabase setup, owner protection, rollout and remaining launch work.
+Keep credentials out of source and `dist/`. The browser needs only Supabase's public
+configuration. Text is escaped before HTML insertion; the app also declares a content
+security policy. Photos are resized and re-encoded locally; uploads and GPX geometry
+have independent server limits. The server remains authoritative for permissions.
 
-The resident version uses the official Supabase SDK, bundled locally at build time. Run `npm ci` before tests/builds. `resident-app.js` supplies the login/account/admin UI plus shared events and ads; `auth.js` handles social sign-in; `api-client.js` sends verified session tokens to the existing backend. Trail ownership becomes account based when activated. No demo profile or role is used by the new interface.
+The existing GitHub Pages origin is shared with other projects under this GitHub user.
+A dedicated domain/origin would isolate session storage from those projects. Backups,
+restore drills, retention/deletion workflows and hosting monitoring remain operational
+follow-up work; passing tests is not a substitute for those controls or an independent
+penetration test. The app does not promise end-to-end encrypted messages.
+
+The village can use the app free of charge. Future commercial licensing and
+multi-village hosting are separate decisions. This is an independent community
+initiative, not an official municipal service. Leaflet retains its bundled BSD license;
+maps are attributed to IGN.

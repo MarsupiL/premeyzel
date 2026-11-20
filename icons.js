@@ -1,2 +1,39 @@
-const icons={home:'M3 10 12 3l9 7v10H3Z M9 20v-7h6v7',calendar:'M5 5h14v16H5Z M8 3v4m8-4v4M5 10h14m-10 4h1m4 0h1m-6 3h1',car:'m3 13 3-7h12l3 7v6H3Z M3 13h18M7 16h1m8 0h1M6 19v2m12-2v2',tag:'M3 3h8l10 10-8 8L3 11Z M7 7h.01',trail:'M3 20 10 5l5 10 3-6 4 11Z M8 9l3 3 2-2',arrow:'M4 12h16m-6-6 6 6-6 6',plus:'M12 5v14M5 12h14',search:'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',bell:'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5Z M10 21h4',chat:'M3 4h18v13H9l-6 4Z',user:'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',users:'M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M2 21v-2a8 8 0 0 1 16 0v2 M17 3a4 4 0 0 1 0 8m3 3a7 7 0 0 1 2 7',pin:'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 0 1 14 0 M14 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0',clock:'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 6v6l4 2',close:'m6 6 12 12M6 18 18 6',check:'m4 12 5 5L20 6',edit:'m4 16 12-12 4 4L8 20H4Z m10-10 4 4',trash:'M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7m4-7v7',flag:'M5 22V3m0 1h14l-4 5 4 5H5',shield:'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6Z m-5 10 3 3 6-6',leaf:'M20 3C8 1 2 6 4 14s16 8 16-11 M4 21 15 10',refresh:'M20 8A9 9 0 1 0 21 14M20 3v5h-5',download:'M12 3v12m-5-5 5 5 5-5 M4 16v5h16v-5',lock:'M5 10h14v11H5Z M8 10V6a4 4 0 0 1 8 0v4',heart:'M12 21 3 12C-2 4 8-1 12 6c4-7 14-2 9 6Z',bike:'M10 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M22 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M6 16l5-9 7 9m-9-9h6m0-4h3l1 5',walk:'M14 4a1 1 0 1 1-2 0 1 1 0 0 1 2 0 M10 9l3-2 3 4 4 1m-7-5-3 8-5 6m5-6 6 2 1 5M10 9 7 13H3',info:'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 11v6m0-10v1',chevron:'m9 5 7 7-7 7',repeat:'m17 2 4 4-4 4M3 11V6h18M7 22l-4-4 4-4m14-1v5H3',mail:'M3 5h18v14H3Z m0 0 9 8 9-8',minus:'M5 12h14',logout:'M9 4H4v16h5m5-14 6 6-6 6m-6-6h12',sun:'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2'};
-export const icon=(name,cls='')=>`<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name]||icons.leaf}"/></svg>`;
+const icons = {
+  home: 'M3 10 12 3l9 7v10H3Z M9 20v-7h6v7',
+  calendar: 'M5 5h14v16H5Z M8 3v4m8-4v4M5 10h14m-10 4h1m4 0h1m-6 3h1',
+  car: 'm3 13 3-7h12l3 7v6H3Z M3 13h18M7 16h1m8 0h1M6 19v2m12-2v2',
+  tag: 'M3 3h8l10 10-8 8L3 11Z M7 7h.01',
+  trail: 'M3 20 10 5l5 10 3-6 4 11Z M8 9l3 3 2-2',
+  arrow: 'M4 12h16m-6-6 6 6-6 6',
+  plus: 'M12 5v14M5 12h14',
+  search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
+  bell: 'M5 17h14l-2-3V9a5 5 0 0 0-10 0v5Z M10 21h4',
+  chat: 'M3 4h18v13H9l-6 4Z',
+  user: 'M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M4 21v-2a8 8 0 0 1 16 0v2',
+  users:
+    'M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M2 21v-2a8 8 0 0 1 16 0v2 M17 3a4 4 0 0 1 0 8m3 3a7 7 0 0 1 2 7',
+  pin: 'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 0 1 14 0 M14 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0',
+  clock: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 6v6l4 2',
+  close: 'm6 6 12 12M6 18 18 6',
+  check: 'm4 12 5 5L20 6',
+  edit: 'm4 16 12-12 4 4L8 20H4Z m10-10 4 4',
+  trash: 'M3 6h18M8 6V3h8v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
+  flag: 'M5 22V3m0 1h14l-4 5 4 5H5',
+  shield: 'M12 2 3 6v6c0 5 9 10 9 10s9-5 9-10V6Z m-5 10 3 3 6-6',
+  leaf: 'M20 3C8 1 2 6 4 14s16 8 16-11 M4 21 15 10',
+  refresh: 'M20 8A9 9 0 1 0 21 14M20 3v5h-5',
+  download: 'M12 3v12m-5-5 5 5 5-5 M4 16v5h16v-5',
+  lock: 'M5 10h14v11H5Z M8 10V6a4 4 0 0 1 8 0v4',
+  heart: 'M12 21 3 12C-2 4 8-1 12 6c4-7 14-2 9 6Z',
+  bike: 'M10 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M22 16a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M6 16l5-9 7 9m-9-9h6m0-4h3l1 5',
+  walk: 'M14 4a1 1 0 1 1-2 0 1 1 0 0 1 2 0 M10 9l3-2 3 4 4 1m-7-5-3 8-5 6m5-6 6 2 1 5M10 9 7 13H3',
+  info: 'M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0 M12 11v6m0-10v1',
+  chevron: 'm9 5 7 7-7 7',
+  repeat: 'm17 2 4 4-4 4M3 11V6h18M7 22l-4-4 4-4m14-1v5H3',
+  mail: 'M3 5h18v14H3Z m0 0 9 8 9-8',
+  minus: 'M5 12h14',
+  logout: 'M9 4H4v16h5m5-14 6 6-6 6m-6-6h12',
+  sun: 'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0 M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2',
+};
+export const icon = (name, cls = '') =>
+  `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${icons[name] || icons.leaf}"/></svg>`;

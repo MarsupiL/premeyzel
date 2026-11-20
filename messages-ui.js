@@ -68,7 +68,7 @@ async function directory(){
 async function onClick(e){
  const b=e.target.closest('[data-dm]');if(!b)return;const action=b.dataset.dm,serial=epoch;
  try{
-  if(action==='new'){b.disabled=true;try{await directory();}finally{b.disabled=false;}}
+  if(action==='new'){if(b.getAttribute('aria-busy')==='true')return;b.setAttribute('aria-busy','true');try{await directory();}finally{b.removeAttribute('aria-busy');}}
   if(action==='refresh'){await refreshInbox();if(activeId)await loadThread(!$('#dm-form'));}
   if(action==='post')await ui.openPost(b.dataset.id);
   if(action==='clear-context'){context=null;$('#dm-context').replaceChildren();}

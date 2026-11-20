@@ -4,6 +4,25 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../resident-app.js', import.meta.url), 'utf8');
+test('losing reception never remounts the trail map or destroys its GPS watch', () => {
+  const from = source.indexOf("window.addEventListener('offline',"),
+    to = source.indexOf('\nlet authSubject;', from);
+  let offline,
+    page = 'balades';
+  const calls = [];
+  vm.runInNewContext(source.slice(from, to), {
+    window: { addEventListener: (_event, handler) => (offline = handler) },
+    route: () => page,
+    hasActiveInput: () => false,
+    render: () => calls.push('render'),
+    toast: () => calls.push('toast'),
+  });
+  offline();
+  assert.deepEqual(calls, []);
+  page = 'accueil';
+  offline();
+  assert.deepEqual(calls, ['render']);
+});
 const submitSource = source.slice(
   source.indexOf("document.addEventListener('submit',"),
   source.indexOf("document.addEventListener('change',"),

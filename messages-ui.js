@@ -2,6 +2,7 @@ import { escapeHTML as esc } from './html.js';
 import { request, allPages } from './api-client.js';
 import { icon } from './icons.js';
 import { normalizeSearch } from './search.js';
+import { updateAppBadge } from './push-ui.js';
 
 const date = (v) =>
   new Intl.DateTimeFormat('fr-FR', {
@@ -26,13 +27,16 @@ let viewer = null,
   polling = false,
   pollCursor = 0,
   inboxRequest = 0;
+let inboxLoaded = false;
 const $ = (s) => root?.querySelector(s);
 export function setMessagingAccount(user, callbacks) {
   if (viewer?.id !== user?.id) {
     unmountMessages();
     inbox = [];
+    inboxLoaded = false;
     drafts.clear();
     inboxRequest++;
+    updateAppBadge(0);
   }
   viewer = user;
   ui = callbacks;
@@ -40,6 +44,7 @@ export function setMessagingAccount(user, callbacks) {
 }
 function updateBadges() {
   const count = inbox.reduce((n, c) => n + c.unread, 0);
+  if (inboxLoaded || !viewer) updateAppBadge(count);
   document.querySelectorAll('[data-message-count]').forEach((el) => {
     el.textContent = count > 99 ? '99+' : String(count);
     el.hidden = !count;
@@ -61,6 +66,7 @@ export async function refreshInbox() {
     const rows = await allPages('conversations', 'conversations');
     if (owner !== viewer?.id || serial !== inboxRequest) return;
     inbox = rows;
+    inboxLoaded = true;
     updateBadges();
     renderList();
   } catch (error) {

@@ -12,6 +12,8 @@ Google and email/password authentication; the backend owns roles and shared data
 - Profiles contain a name and optional photo. Contact details are not public profile fields.
 - Private conversations are accessible only to their two participants, including when an
   administrator signs in. Optional push alerts hide message text and sender identity.
+- Mon compte offers a per-device notification test. Unread messages update the Home
+  Screen badge where supported; reading messages and signing out clear it as appropriate.
 - Members manage their own content. Administrators manage all content and roles; the
   owner's role is protected. All authorization is checked again on the server.
 - GPX import/export, IGN maps with contours, fullscreen viewing and opt-in GPS tracking.
@@ -68,6 +70,12 @@ Keep credentials out of source and `dist/`. The browser needs only Supabase's pu
 configuration. Text is escaped before HTML insertion; the app also declares a content
 security policy. Photos are resized and re-encoded locally; uploads and GPX geometry
 have independent server limits. The server remains authoritative for permissions.
+
+Recent Apple devices can display the server's generic declarative notification even
+if background JavaScript or local storage is unavailable. Older browsers use the
+service-worker handler. A queued generic alert/badge can arrive briefly after sign-out;
+its fallback contains no sender, message text or account-specific navigation. The test
+button reports provider acceptance separately from confirmed display on the device.
 
 The existing GitHub Pages origin is shared with other projects under this GitHub user.
 A dedicated domain/origin would isolate session storage from those projects. Backups,

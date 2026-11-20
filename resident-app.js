@@ -185,7 +185,9 @@ function render() {
   });
   loadPhotos();
   if (user) syncPushAccount(user);
-  if (!user) rememberNotificationDestination();
+  // OAuth returns without a hash. Keep its saved destination until auth initialization
+  // has consumed it; the initial signed-out shell must not erase that value.
+  if (!user && !loading) rememberNotificationDestination();
   openLinkedEvent();
 }
 function page(r) {

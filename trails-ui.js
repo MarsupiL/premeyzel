@@ -1,3 +1,4 @@
+import {normalizeSearch} from './search.js';
 import {parseGPX,trackStats,exportGPX,gpxFilename,MAX_GPX_BYTES} from './gpx.js';
 import {createTrailMap} from './trail-map.js';
 import {TRAIL_API,fetchTrails,fetchTrail,publishTrail,removeSharedTrail,ownedTrailIds} from './trail-api.js';
@@ -16,7 +17,7 @@ const visual=p=>{const src=imageSrc(p.photo);return `<span class="post-visual">$
 const byId=id=>details.get(id)||items.find(p=>p.id===id);
 function cache(){try{localStorage.setItem(CACHE,JSON.stringify({items,details:[...details.entries()].slice(-20)}));}catch{/* Shared storage remains authoritative; a full local cache must not block reads. */}}
 function notice(message,kind=''){if(root){const el=root.querySelector('.trails-sync');el.textContent=message;el.className='trails-sync notice '+kind;}}
-function visible(){return items.filter(p=>(filter==='Tout'||activity(p)===filter)&&`${p.title} ${p.description} ${p.authorName}`.toLocaleLowerCase('fr').includes(query.toLocaleLowerCase('fr')));}
+function visible(){return items.filter(p=>(filter==='Tout'||activity(p)===filter)&&normalizeSearch(`${p.title} ${p.description} ${p.authorName}`).includes(normalizeSearch(query)));}
 function updateList(){if(!root)return;const posts=visible();if(!posts.some(p=>p.id===selectedId))selectedId=posts[0]?.id;root.querySelector('#trail-results').textContent=`${posts.length} parcours partagé${posts.length>1?'s':''}`;
  root.querySelector('#shared-trail-list').innerHTML=posts.map(p=>`<article class="trail-card ${p.id===selectedId?'selected':''}"><button class="trail-select" data-trail="select" data-id="${p.id}" aria-pressed="${p.id===selectedId}"><span class="trail-thumbnail" aria-hidden="true">${visual(p)}</span><span><span class="badge plain">${activity(p)} · ${esc(p.difficulty)}</span><h3>${esc(p.title)}</h3><span class="trail-stats">${stats(p)}</span><span class="trail-author">Partagé par ${esc(p.authorName||'un habitant')}</span></span></button><div class="trail-actions"><button class="text-link" data-trail="open" data-id="${p.id}">Voir le parcours</button><button class="text-link" data-trail="download" data-id="${p.id}" aria-label="Télécharger le GPX de ${esc(p.title)}">GPX</button></div></article>`).join('')||'<p class="notice">Aucun parcours ne correspond à votre recherche.</p>';
  updateSelected();map?.setTrails(posts.map(p=>byId(p.id)),selectedId,false);

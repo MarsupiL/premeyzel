@@ -30,6 +30,7 @@ const files = [
   'trail-api.js',
   'trails-ui.js',
   'art.js',
+  'category-art.js',
   'style.css',
   'manifest.webmanifest',
   'assets',

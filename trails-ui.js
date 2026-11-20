@@ -11,7 +11,7 @@ import {
   removeSharedTrail,
   ownedTrailIds,
 } from './trail-api.js';
-import { preparePhoto, photoSource } from './photos.js';
+import { defaultArt, preparePhoto, photoSource } from './photos.js';
 import { cardArt } from './art.js';
 
 const CACHE = 'premeyzel-shared-trails-v1';
@@ -41,9 +41,12 @@ const imageSrc = (photo) =>
   typeof photo === 'string' && photo.startsWith(TRAIL_API + '/api/trails/')
     ? photo
     : photoSource(photo);
+// These two values were the pilot's generic trail placeholders, not uploads.
+const trailPhoto = (photo) =>
+  photo === 'sample:forest' || photo === 'sample:mountain' ? null : photo;
 const visual = (p) => {
-  const src = imageSrc(p.photo);
-  return `<span class="post-visual">${cardArt(p.activity === 'VTT' ? 'mountain' : 'forest')}${src ? `<img class="post-photo" alt="" src="${esc(src)}">` : ''}</span>`;
+  const src = imageSrc(trailPhoto(p.photo));
+  return `<span class="post-visual">${cardArt(defaultArt('trails', p.activity === 'VTT' ? 'VTT' : 'Marche'))}${src ? `<img class="post-photo" alt="" src="${esc(src)}">` : ''}</span>`;
 };
 const byId = (id) => details.get(id) || items.find((p) => p.id === id);
 function cache() {
@@ -403,7 +406,7 @@ function composeTrail(existing) {
       id: p.id || crypto.randomUUID(),
       authorName: existing ? p.authorName || '' : activeProfileName,
       track: p.track || null,
-      photo: p.photo || null,
+      photo: trailPhoto(p.photo) || null,
       busy: 0,
       revision: p.revision,
     };
@@ -425,12 +428,21 @@ function composeTrail(existing) {
       'difficulty',
       ['À évaluer', 'Facile', 'Modéré', 'Sportif'].map((s) => [s, s]),
       p.difficulty || 'À évaluer',
-    )}<label>Durée estimée en minutes (facultative)<input name="duration" type="number" min="1" max="10000" value="${p.duration || ''}"></label></div><label>Lieu<input name="location" value="${esc(p.location || 'Prémeyzel')}" maxlength="120" required></label><label>Description (facultative)<textarea name="description" rows="3" maxlength="2000" placeholder="Départ, terrain, points à connaître…">${esc(p.description || '')}</textarea></label><fieldset class="photo-editor"><legend>Photo (facultative)</legend><div class="photo-preview">${visual(p)}</div><label class="photo-file-label">Ajouter ou remplacer la photo<input id="trail-photo" type="file" accept="image/jpeg,image/png,image/webp"></label><button class="btn secondary" type="button" data-photo-remove ${draft.photo ? '' : 'hidden'}>Retirer la photo</button><p class="fine">JPEG, PNG ou WebP · 10 Mo maximum. Une illustration s’affiche sans photo.</p></fieldset><p class="form-error" role="alert" tabindex="-1"></p><div class="form-footer"><button type="button" class="btn secondary" data-cancel>Annuler</button><button type="submit" class="btn primary">${existing ? 'Enregistrer les modifications' : 'Publier pour tous'}</button></div></form>`,
+    )}<label>Durée estimée en minutes (facultative)<input name="duration" type="number" min="1" max="10000" value="${p.duration || ''}"></label></div><label>Lieu<input name="location" value="${esc(p.location || 'Prémeyzel')}" maxlength="120" required></label><label>Description (facultative)<textarea name="description" rows="3" maxlength="2000" placeholder="Départ, terrain, points à connaître…">${esc(p.description || '')}</textarea></label><fieldset class="photo-editor"><legend>Photo (facultative)</legend><div class="photo-preview">${visual(p)}</div><label class="photo-file-label">Ajouter ou remplacer la photo<input id="trail-photo" type="file" accept="image/jpeg,image/png,image/webp"></label><button class="btn secondary" type="button" data-photo-remove ${draft.photo ? '' : 'hidden'}>Retirer la photo</button><p class="fine">JPEG, PNG ou WebP · 10 Mo maximum. Sans photo, l’illustration correspond à l’activité choisie.</p></fieldset><p class="form-error" role="alert" tabindex="-1"></p><div class="form-footer"><button type="button" class="btn secondary" data-cancel>Annuler</button><button type="submit" class="btn primary">${existing ? 'Enregistrer les modifications' : 'Publier pour tous'}</button></div></form>`,
   );
   const form = d.querySelector('form'),
     error = d.querySelector('.form-error'),
     submit = form.querySelector('[type="submit"]');
   const updateBusy = () => (submit.disabled = draft.busy > 0);
+  const updatePhotoPreview = () => {
+    d.querySelector('.photo-preview').innerHTML = visual({
+      photo: draft.photo,
+      activity: form.elements.activity.value,
+    });
+  };
+  form.elements.activity.addEventListener('change', () => {
+    if (!draft.photo) updatePhotoPreview();
+  });
   const showPreview = () => {
     const el = d.querySelector('.gpx-preview');
     el.hidden = false;
@@ -484,7 +496,7 @@ function composeTrail(existing) {
       const photo = await preparePhoto(file);
       if (!d.isConnected || request !== photoRequest) return;
       draft.photo = photo;
-      d.querySelector('.photo-preview').innerHTML = visual({ photo });
+      updatePhotoPreview();
       d.querySelector('[data-photo-remove]').hidden = false;
     } catch (err) {
       error.textContent = err.message;
@@ -497,7 +509,7 @@ function composeTrail(existing) {
   d.querySelector('[data-photo-remove]').onclick = () => {
     photoRequest++;
     draft.photo = null;
-    d.querySelector('.photo-preview').innerHTML = visual({});
+    updatePhotoPreview();
     d.querySelector('[data-photo-remove]').hidden = true;
   };
   const payload = () => ({

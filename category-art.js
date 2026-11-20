@@ -4,6 +4,7 @@ const group = (x, y, scale, drawing) =>
   `<g transform="translate(${x} ${y}) scale(${scale})">${drawing}</g>`;
 const ground = '<path d="M0 186q198-22 400 0v34H0Z" fill="#c8d5b1"/>';
 const drawings = {
+  backpack: `<path d="M50 36V25q0-10 10-10h19q10 0 10 10v11" fill="none" stroke="#59705e" stroke-width="7"/><path d="M37 52q-17 19-11 85m78-85q17 19 11 85" fill="none" stroke="#59705e" stroke-width="10" stroke-linecap="round"/><rect x="28" y="37" width="83" height="123" rx="20" fill="#789968"/><path d="M28 68V49q0-20 21-20h42q20 0 20 20v19q-40 23-83 0Z" fill="#9eb586"/><path d="M45 77v23m48-23v23" stroke="#ddbb8b" stroke-width="7"/><rect x="42" y="88" width="9" height="12" rx="2" fill="#897454"/><rect x="89" y="88" width="9" height="12" rx="2" fill="#897454"/><rect x="42" y="112" width="56" height="34" rx="7" fill="#5f8052"/><path d="M51 121h38" stroke="#c8d5b1" stroke-width="3" stroke-linecap="round"/><rect x="11" y="100" width="19" height="48" rx="6" fill="#9daea0"/><path d="M15 99v-8h11v8" fill="#59705e"/>`,
   bread: `<path d="m24 99 12 33h104l13-33" fill="#aa7b4f"/><path d="M36 100q-13-31 15-46 32-10 39 44" fill="#c59358"/><path d="M77 99q-4-43 25-45 29 1 29 45" fill="#d3a46a"/><path d="m43 68 17 13m-10-24 18 13m32-2 17 7m-17 6 20 7" stroke="#f1d39a" stroke-width="5" stroke-linecap="round"/><path d="M25 102h126m-114 12h104m-108 10h99" stroke="#ddbb8b" stroke-width="4"/>`,
   brushes: `<path d="m48 116-17-73m39 73L91 31m-33 87 1-75" stroke="#a97d55" stroke-width="8" stroke-linecap="round"/><path d="m22 44-6-24q8-7 17-5l8 25Z" fill="#789968"/><path d="m83 31 7-26q12 1 15 9L97 37Z" fill="#c8835f"/><path d="M51 45V19q8-6 16 0v26Z" fill="#d39b59"/><path d="m25 96 10 65h51l11-65Z" fill="#9daea0"/><path d="M39 109h43m-40 14h37" stroke="#c8d5b1" stroke-width="4" stroke-linecap="round"/>`,
   bike: `<g fill="#e5ead9" stroke="#46534a" stroke-width="8"><circle cx="59" cy="135" r="43"/><circle cx="201" cy="135" r="43"/></g><g fill="none" stroke="#9daea0" stroke-width="2"><path d="M59 93v84M17 135h84M29 105l60 60m-60 0 60-60M201 93v84m-42-42h84m-72-30 60 60m-60 0 60-60"/></g><path d="m59 135 40-66 37 66H59m40-66h78l-41 66m41-66 24 66m-24-66-6-22h23M99 69l-8-21" fill="none" stroke="#b67c50" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M77 47h31m63 0 18-8h16" stroke="#46534a" stroke-width="6" stroke-linecap="round"/><circle cx="136" cy="135" r="9" fill="#59705e"/><path d="m136 135 10 13h13" stroke="#59705e" stroke-width="4" fill="none"/>`,
@@ -29,6 +30,13 @@ const drawings = {
 export function categoryArt(kind, legacy) {
   const scene = (...elements) => ground + elements.join('');
   switch (kind) {
+    case 'trail-hiking':
+      return scene(group(61, 72, 0.92, drawings.boot), group(226, 20, 1.06, drawings.backpack));
+    case 'trail-cycling':
+      return scene(
+        '<path d="m24 170 91-106 58 64 67-95 136 137Z" fill="#d2dcc6"/><path d="m0 198q111-26 222 5t178-4" fill="none" stroke="#daccaa" stroke-width="8"/>',
+        group(39, -13, 1.22, drawings.bike),
+      );
     case 'event-meeting':
       return scene(
         group(4, 24, 0.9, drawings.neighbours),

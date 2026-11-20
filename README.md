@@ -115,3 +115,5 @@ New static modules are included in the build and service-worker cache. Deploy th
 backend hunting-zones migration/API before publishing this frontend. Verify polygon
 creation/editing, author/admin permissions, expired-zone removal and disconnected
 state using disposable local fixtures rather than real danger reports.
+
+Ride date filtering uses Paris calendar dates and the server’s recurrence rules, including weekly/fortnightly schedules and end dates. The selected occurrence appears in both cards and details; clearing the date restores all upcoming rides. Destination and offer/request filters remain combinable.

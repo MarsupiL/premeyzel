@@ -46,9 +46,9 @@ function fixture() {
   };
   vm.createContext(context);
   vm.runInContext(
-    `let user=null,events=[],ads=[],trips=[],tripExpiryTimer=null,members=[],refreshing=null,loading=true,loadError='';const isAdmin=()=>['owner','admin'].includes(user?.role);function render(){snapshot({user,events,ads,trips,members});}\n` +
+    `let user=null,events=[],ads=[],trips=[],tripDate='',filteredTripDate='',filteredTrips=[],tripExpiryTimer=null,members=[],refreshing=null,loading=true,loadError='';const isAdmin=()=>['owner','admin'].includes(user?.role);function render(){snapshot({user,events,ads,trips,members,tripDate,filteredTripDate,filteredTrips});}\n` +
       source.slice(start, end) +
-      `\nthis.api={refreshData,clearSessionUI,state:()=>({user,events,ads,trips,members,loading})};`,
+      `\nthis.api={refreshData,clearSessionUI,setDate:(value)=>{tripDate=value;filteredTripDate='';filteredTrips=[];},state:()=>({user,events,ads,trips,members,loading,tripDate,filteredTripDate,filteredTrips,loadError})};`,
     context,
   );
   return {
@@ -157,4 +157,82 @@ test('departure expiry refreshes the shared feed and sign-out cancels the timer'
   f.change();
   f.expire();
   assert.equal(calls, 2);
+});
+
+test('changing the selected date during a refresh never displays stale date results', async () => {
+  const f = fixture(),
+    oldDate = deferred(),
+    started = deferred();
+  f.setAccount(async () => ({ id: 'alice', role: 'member' }));
+  await f.api.refreshData();
+  f.api.setDate('2026-12-04');
+  f.setPages((path) => {
+    if (path.includes('date=2026-12-04')) {
+      started.resolve();
+      return oldDate.promise;
+    }
+    return Promise.resolve(
+      path.includes('date=2026-12-11') ? [{ id: 'chosen', departureAt: Date.now() + 60000 }] : [],
+    );
+  });
+  const old = f.api.refreshData(false);
+  await started.promise;
+  f.api.setDate('2026-12-11');
+  f.api.refreshData();
+  oldDate.resolve([{ id: 'stale', departureAt: Date.now() + 60000 }]);
+  await old;
+  await f.api.refreshData();
+  assert.equal(f.api.state().filteredTripDate, '2026-12-11');
+  assert.equal(f.api.state().filteredTrips[0].id, 'chosen');
+  assert.ok(f.snapshots.every((s) => !s.filteredTrips.some((p) => p.id === 'stale')));
+});
+
+test('clearing a date or signing out discards pending private date-filter results', async () => {
+  for (const signOut of [false, true]) {
+    const f = fixture(),
+      pending = deferred(),
+      started = deferred();
+    f.setAccount(async () => ({ id: 'alice', role: 'member' }));
+    await f.api.refreshData();
+    f.api.setDate('2026-12-11');
+    f.setPages((path) => {
+      if (path.includes('date=')) {
+        started.resolve();
+        return pending.promise;
+      }
+      return Promise.resolve([]);
+    });
+    const loading = f.api.refreshData();
+    await started.promise;
+    if (signOut) {
+      f.change();
+      f.setAccount(async () => null);
+    } else f.api.setDate('');
+    pending.resolve([{ id: 'private', departureAt: Date.now() + 60000 }]);
+    await loading;
+    await f.api.refreshData();
+    assert.equal(f.api.state().tripDate, '');
+    assert.equal(f.api.state().filteredTrips.length, 0);
+    assert.ok(f.snapshots.every((s) => !s.filteredTrips.some((p) => p.id === 'private')));
+  }
+});
+
+test('a failed date search stops loading and can be retried', async () => {
+  const f = fixture();
+  f.setAccount(async () => ({ id: 'alice', role: 'member' }));
+  await f.api.refreshData();
+  f.api.setDate('2026-12-11');
+  f.setPages(async (path) => {
+    if (path.includes('date=')) throw new Error('Offline');
+    return [];
+  });
+  await f.api.refreshData();
+  assert.equal(f.api.state().filteredTripDate, '2026-12-11');
+  assert.equal(f.api.state().loadError, 'Offline');
+  f.setPages(async (path) =>
+    path.includes('date=') ? [{ id: 'recovered', departureAt: Date.now() + 60000 }] : [],
+  );
+  await f.api.refreshData();
+  assert.equal(f.api.state().loadError, '');
+  assert.equal(f.api.state().filteredTrips[0].id, 'recovered');
 });

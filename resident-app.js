@@ -51,6 +51,9 @@ let user = null,
   events = [],
   ads = [],
   trips = [],
+  tripDate = '',
+  filteredTripDate = '',
+  filteredTrips = [],
   members = [],
   loading = true,
   loadError = '',
@@ -200,7 +203,13 @@ function page(r) {
     return '<div id="trails-app"><p class="notice">Chargement des parcours…</p></div>';
   if (['trajets', 'annonces', 'compte', 'admin', 'messages'].includes(r) && !user)
     return loginPage();
-  if (r === 'trajets') return tripsPage(trips, { filter, query, loading });
+  if (r === 'trajets')
+    return tripsPage(tripDate ? (filteredTripDate === tripDate ? filteredTrips : []) : trips, {
+      filter,
+      query,
+      date: tripDate,
+      loading: loading || (!!tripDate && filteredTripDate !== tripDate),
+    });
   if (r === 'messages') return '<div id="messages-app"></div>';
   if (r === 'compte') return accountPage();
   if (r === 'admin') return adminPage();
@@ -329,13 +338,16 @@ function selectField(label, name, values, value) {
 }
 async function detail(id, expectedHash = '') {
   const serial = ++detailRequest;
-  const p = await request('posts/' + encodeURIComponent(id));
+  const onDate = !expectedHash && route() === 'trajets' ? tripDate : '';
+  const p = await request(
+    'posts/' + encodeURIComponent(id) + (onDate ? '?date=' + encodeURIComponent(onDate) : ''),
+  );
   if (serial !== detailRequest || (expectedHash && location.hash !== expectedHash)) return;
   if (expectedHash && p.kind !== 'events') throw new Error('Cet événement n’est plus disponible.');
   if (p.kind === 'trips') {
     modal(
       esc(p.title),
-      `${tripDetail(p)}${p.canContact ? `<button class="btn primary" data-action="contact" data-id="${p.id}">${icon('chat')}Contacter ${esc(p.authorName || 'l’auteur')}</button>` : ''}${canManage(p) ? `<div class="management"><button class="text-link" data-action="edit" data-id="${p.id}">${icon('edit')}Modifier</button><button class="text-link danger" data-action="delete" data-id="${p.id}">${icon('trash')}Supprimer</button></div>` : ''}`,
+      `${tripDetail(p, onDate)}${p.canContact ? `<button class="btn primary" data-action="contact" data-id="${p.id}">${icon('chat')}Contacter ${esc(p.authorName || 'l’auteur')}</button>` : ''}${canManage(p) ? `<div class="management"><button class="text-link" data-action="edit" data-id="${p.id}">${icon('edit')}Modifier</button><button class="text-link danger" data-action="delete" data-id="${p.id}">${icon('trash')}Supprimer</button></div>` : ''}`,
     );
     return;
   }
@@ -457,6 +469,9 @@ function clearSessionUI() {
   events = [];
   ads = [];
   trips = [];
+  tripDate = '';
+  filteredTripDate = '';
+  filteredTrips = [];
   clearTimeout(tripExpiryTimer);
   members = [];
   clearPhotos();
@@ -468,11 +483,12 @@ function clearSessionUI() {
 }
 function scheduleTripExpiry() {
   clearTimeout(tripExpiryTimer);
-  const next = Math.min(...trips.map((trip) => trip.departureAt));
+  const next = Math.min(...[...trips, ...filteredTrips].map((trip) => trip.departureAt));
   if (!Number.isFinite(next)) return;
   tripExpiryTimer = setTimeout(
     () => {
       trips = trips.filter((trip) => trip.departureAt > Date.now());
+      filteredTrips = filteredTrips.filter((trip) => trip.departureAt > Date.now());
       if (!hasActiveInput()) render();
       refreshData(!hasActiveInput());
     },
@@ -481,8 +497,11 @@ function scheduleTripExpiry() {
 }
 function refreshData(redraw = true) {
   const serial = sessionGeneration();
-  if (refreshing?.serial === serial) return refreshing.promise;
-  const job = { serial };
+  if (refreshing?.serial === serial) {
+    refreshing.redraw ||= redraw;
+    return refreshing.promise;
+  }
+  const job = { serial, redraw, date: tripDate };
   refreshing = job;
   job.promise = (async () => {
     try {
@@ -491,16 +510,24 @@ function refreshData(redraw = true) {
       if (serial !== sessionGeneration()) return;
       if (previous !== next?.id) clearSessionUI();
       user = next;
+      job.date = tripDate;
       const results = await Promise.allSettled([
         allPages('posts?kind=events', 'posts'),
         user ? allPages('posts?kind=ads', 'posts') : Promise.resolve([]),
         user ? allPages('posts?kind=trips', 'posts') : Promise.resolve([]),
         isAdmin() ? allPages('admin/users', 'users') : Promise.resolve([]),
+        user && job.date
+          ? allPages('posts?kind=trips&date=' + encodeURIComponent(job.date), 'posts')
+          : Promise.resolve([]),
       ]);
       if (serial !== sessionGeneration()) return;
       [events, ads, trips, members] = results.map((r, i) =>
         r.status === 'fulfilled' ? r.value : [events, ads, trips, members][i],
       );
+      if (job.date === tripDate) {
+        filteredTrips = results[4].status === 'fulfilled' ? results[4].value : [];
+        filteredTripDate = job.date;
+      }
       const failed = results.find((r) => r.status === 'rejected');
       loadError = failed && authConfig()?.accountsEnabled ? failed.reason.message : '';
     } catch (error) {
@@ -514,7 +541,8 @@ function refreshData(redraw = true) {
         if (serial === sessionGeneration()) {
           loading = false;
           scheduleTripExpiry();
-          if (redraw) render();
+          if (job.date !== tripDate) refreshData(job.redraw);
+          if (job.redraw) render();
         }
       }
     }
@@ -574,8 +602,18 @@ document.addEventListener('click', async (e) => {
     if (action === 'reset-search') {
       query = '';
       filter = 'Tout';
+      tripDate = '';
+      filteredTripDate = '';
+      filteredTrips = [];
       render();
       $('#search')?.focus({ preventScroll: true });
+    }
+    if (action === 'clear-trip-date') {
+      tripDate = '';
+      filteredTripDate = '';
+      filteredTrips = [];
+      render();
+      $('#trip-date-filter')?.focus({ preventScroll: true });
     }
     if (action === 'refresh') await refreshData();
     if (action === 'cancel-registration') {
@@ -711,6 +749,15 @@ document.addEventListener('submit', async (e) => {
   }
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.id === 'trip-date-filter') {
+    tripDate = e.target.value;
+    filteredTripDate = '';
+    filteredTrips = [];
+    render();
+    $('#trip-date-filter')?.focus({ preventScroll: true });
+    await refreshData();
+    return;
+  }
   if (e.target.closest('.ride-form')) updateTripForm(e.target.form);
   if (e.target instanceof HTMLSelectElement) {
     const display = e.target.parentElement.querySelector('.select-value');
@@ -809,6 +856,9 @@ window.addEventListener('hashchange', () => {
   linkedEvent = '';
   query = '';
   filter = 'Tout';
+  tripDate = '';
+  filteredTripDate = '';
+  filteredTrips = [];
   render();
   window.scrollTo({ top: 0, behavior: 'instant' });
   $('#main').focus({ preventScroll: true });

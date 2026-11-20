@@ -1,5 +1,6 @@
 import { escapeHTML as esc } from './html.js';
 import { normalizeSearch } from './search.js';
+import { tripsPage, tripFields, tripDetail } from './trips.js';
 import { emailForm, mountEmailForm, authFormBusy, authMode } from './auth-ui.js';
 import { pushSettings, syncPushAccount, disconnectPush } from './push-ui.js';
 import {
@@ -49,6 +50,7 @@ const navs = [
 let user = null,
   events = [],
   ads = [],
+  trips = [],
   members = [],
   loading = true,
   loadError = '',
@@ -195,19 +197,9 @@ function page(r) {
   if (r === 'confidentialite') return privacyPage();
   if (r === 'balades')
     return '<div id="trails-app"><p class="notice">Chargement des parcours…</p></div>';
-  if (r === 'trajets')
-    return (
-      title(
-        'FAIRE UN BOUT DE CHEMIN',
-        'Les trajets arrivent bientôt',
-        'Le partage de trajets et les réservations seront ouverts dans une prochaine étape.',
-      ) +
-      empty(
-        'Encore un peu de chemin',
-        'Pour le moment, partagez vos événements, vos annonces et vos balades.',
-      )
-    );
-  if (['annonces', 'compte', 'admin', 'messages'].includes(r) && !user) return loginPage();
+  if (['trajets', 'annonces', 'compte', 'admin', 'messages'].includes(r) && !user)
+    return loginPage();
+  if (r === 'trajets') return tripsPage(trips, { filter, query, loading });
   if (r === 'messages') return '<div id="messages-app"></div>';
   if (r === 'compte') return accountPage();
   if (r === 'admin') return adminPage();
@@ -227,6 +219,7 @@ function loginPage() {
 function homePage() {
   return `<section class="hero"><div class="hero-copy"><span class="hero-label">${icon('pin')}AIN · BUGEY SUD</span><h1>La vie est plus belle<br><em>entre voisins.</em></h1><p>Se retrouver, s’entraider, partager.<br>Les petites choses qui font notre village.</p>${publish('', 'Partager quelque chose')}<span class="hero-footnote">Bienvenue ${user ? esc(firstName()) : 'à Prémeyzel'} ${icon('sun')}</span></div><div class="hero-art">${villageArt()}<span class="art-caption">Notre coin de nature, notre coin de vie.</span></div></section><div class="quick-links">${[
     ['evenements', 'calendar', 'On se retrouve ?', 'Les rendez-vous du village'],
+    ['trajets', 'car', 'On partage le chemin ?', 'Proposer ou chercher un trajet'],
     ['annonces', 'tag', 'Ça peut servir !', 'Donner, louer, prêter, échanger'],
     ['balades', 'trail', 'On prend l’air ?', 'À pied ou à vélo'],
   ]
@@ -264,13 +257,13 @@ function listPage(kind) {
 }
 function accountPage() {
   return `${title('MON COIN DU VILLAGE', 'Bonjour ' + esc(firstName()), 'Retrouvez votre compte et vos publications.')}<section class="account-card"><div><h2>${esc(user.name)}</h2>${badge(roleName(user.role))}<p>Votre compte fonctionne sur tous vos appareils après connexion.</p></div><button class="btn secondary" data-action="sign-out">${icon('logout')}Me déconnecter</button></section>${profileSection()}${pushSettings()}${hasLegacyTrails() ? '<section class="activity-section"><h2>Vos parcours du pilote</h2><p>Rattachez les parcours créés avec ce navigateur à votre compte pour les gérer aussi depuis vos autres appareils.</p><button class="btn secondary" data-action="claim-trails">Rattacher mes anciens parcours</button></section>' : ''}<section class="activity-section"><div class="section-heading"><h2>Mes publications</h2>${publish('', 'Publier')}</div>${
-    [...events, ...ads]
+    [...events, ...ads, ...trips]
       .filter((p) => p.mine)
       .map(
         (p) =>
-          `<div class="activity-row"><div><strong>${esc(p.title)}</strong><span>${p.kind === 'events' ? 'Événement' : 'Annonce'}</span></div><button class="btn secondary" data-action="detail" data-id="${p.id}">Gérer</button></div>`,
+          `<div class="activity-row"><div><strong>${esc(p.title)}</strong><span>${p.kind === 'events' ? 'Événement' : p.kind === 'trips' ? 'Trajet' : 'Annonce'}</span></div><button class="btn secondary" data-action="detail" data-id="${p.id}">Gérer</button></div>`,
       )
-      .join('') || '<p>Aucune annonce ni événement publié pour le moment.</p>'
+      .join('') || '<p>Aucune publication pour le moment.</p>'
   }<p><a href="#/balades" class="text-link">Retrouver et gérer mes parcours</a></p></section>${isAdmin() ? '<a class="btn primary" href="#/admin">Administrer le village</a>' : ''}`;
 }
 function profileSection() {
@@ -293,12 +286,13 @@ function adminPage() {
   return `${title('PRENDRE SOIN DU VILLAGE', 'Administration', 'Gérez les publications et les rôles des habitants.')}<div class="admin-stats">${[
     [events.length, 'Événements'],
     [ads.length, 'Annonces'],
+    [trips.length, 'Trajets'],
     [members.length, 'Comptes'],
   ]
     .map(([n, l]) => `<div><strong>${n}</strong><span>${l}</span></div>`)
     .join(
       '',
-    )}</div><section class="activity-section"><div class="section-heading"><div><h2>Comptes et rôles</h2><p>Chaque nouvel inscrit est habitant. Le compte propriétaire reste protégé.</p></div><button class="btn secondary" data-action="refresh">Actualiser</button></div><div class="member-list">${members.map((m) => `<article class="member-row"><span class="avatar">${esc(m.name.slice(0, 1))}</span><div class="member-identity"><h3>${esc(m.name)}</h3><p>${esc(m.email)}</p></div>${badge(roleName(m.role), m.role === 'member' ? 'plain' : '')}${m.role === 'owner' ? '<span class="role-protected">Compte protégé</span>' : m.id === user.id ? '<span class="role-protected">Votre compte</span>' : `<button class="btn secondary small" data-action="change-role" data-id="${esc(m.id)}">${m.role === 'admin' ? 'Retirer le rôle admin' : 'Nommer admin'}</button>`}</article>`).join('') || '<p>Aucun compte à afficher pour le moment.</p>'}</div></section><section class="activity-section"><h2>Publications</h2><p><a href="#/balades" class="btn secondary">Gérer les parcours</a></p>${[...events, ...ads].map((p) => `<div class="activity-row"><div><strong>${esc(p.title)}</strong><span>${p.kind === 'events' ? 'Événement' : 'Annonce'} · ${esc(p.authorName)}</span></div><button class="btn secondary" data-action="detail" data-id="${p.id}">Modifier ou retirer</button></div>`).join('') || '<p>Les événements et annonces des habitants apparaîtront ici.</p>'}</section>`;
+    )}</div><section class="activity-section"><div class="section-heading"><div><h2>Comptes et rôles</h2><p>Chaque nouvel inscrit est habitant. Le compte propriétaire reste protégé.</p></div><button class="btn secondary" data-action="refresh">Actualiser</button></div><div class="member-list">${members.map((m) => `<article class="member-row"><span class="avatar">${esc(m.name.slice(0, 1))}</span><div class="member-identity"><h3>${esc(m.name)}</h3><p>${esc(m.email)}</p></div>${badge(roleName(m.role), m.role === 'member' ? 'plain' : '')}${m.role === 'owner' ? '<span class="role-protected">Compte protégé</span>' : m.id === user.id ? '<span class="role-protected">Votre compte</span>' : `<button class="btn secondary small" data-action="change-role" data-id="${esc(m.id)}">${m.role === 'admin' ? 'Retirer le rôle admin' : 'Nommer admin'}</button>`}</article>`).join('') || '<p>Aucun compte à afficher pour le moment.</p>'}</div></section><section class="activity-section"><h2>Publications</h2><p><a href="#/balades" class="btn secondary">Gérer les parcours</a></p>${[...events, ...ads, ...trips].map((p) => `<div class="activity-row"><div><strong>${esc(p.title)}</strong><span>${p.kind === 'events' ? 'Événement' : p.kind === 'trips' ? 'Trajet' : 'Annonce'} · ${esc(p.authorName)}</span></div><button class="btn secondary" data-action="detail" data-id="${p.id}">Modifier ou retirer</button></div>`).join('') || '<p>Les publications des habitants apparaîtront ici.</p>'}</section>`;
 }
 function privacyPage() {
   return `${title('EN CONFIANCE', 'Vos données personnelles', 'Les informations utilisées par l’application.')}<article class="privacy-copy"><p>Consultez la <a href="./confidentialite.html">politique de confidentialité</a> pour connaître les données utilisées, leur visibilité, leur conservation et les modalités de demande de suppression.</p><p>Contact : <a href="mailto:marsupil@gmail.com">marsupil@gmail.com</a>.</p></article>`;
@@ -337,6 +331,13 @@ async function detail(id, expectedHash = '') {
   const p = await request('posts/' + encodeURIComponent(id));
   if (serial !== detailRequest || (expectedHash && location.hash !== expectedHash)) return;
   if (expectedHash && p.kind !== 'events') throw new Error('Cet événement n’est plus disponible.');
+  if (p.kind === 'trips') {
+    modal(
+      esc(p.title),
+      `${tripDetail(p)}${p.canContact ? `<button class="btn primary" data-action="contact" data-id="${p.id}">${icon('chat')}Contacter ${esc(p.authorName || 'l’auteur')}</button>` : ''}${canManage(p) ? `<div class="management"><button class="text-link" data-action="edit" data-id="${p.id}">${icon('edit')}Modifier</button><button class="text-link danger" data-action="delete" data-id="${p.id}">${icon('trash')}Supprimer</button></div>` : ''}`,
+    );
+    return;
+  }
   let extra;
   if (p.kind === 'events') {
     extra = `<div class="detail-facts"><span>${icon('calendar')}${dateText(p.date)} · ${p.date.split('T')[1] || 'Horaire à préciser'}</span><span>${icon('users')}${p.used}${p.capacity ? ' / ' + p.capacity : ''} personnes inscrites</span></div>`;
@@ -388,6 +389,7 @@ async function compose(kind, id) {
       'Qu’aimeriez-vous partager ?',
       `<div class="compose-choices">${[
         ['events', 'calendar', 'Un événement'],
+        ['trips', 'car', 'Un trajet'],
         ['ads', 'tag', 'Une petite annonce'],
         ['trails', 'trail', 'Une balade'],
       ]
@@ -402,6 +404,14 @@ async function compose(kind, id) {
   const p = id ? await request('posts/' + id) : {};
   kind = p.kind || kind;
   if (id && !canManage(p)) throw new Error('Vous ne pouvez pas modifier cette publication.');
+  if (kind === 'trips') {
+    modal(
+      id ? 'Modifier le trajet' : 'Publier un trajet',
+      `<form id="post-form" class="ride-form"><p class="fine">Partagé par ${esc(p.authorName || firstName())} · Visible par les habitants connectés</p>${tripFields(p)}${formError()}<div class="form-footer"><button type="button" class="btn secondary" data-action="close">Annuler</button><button type="submit" class="btn primary">${id ? 'Enregistrer' : 'Publier le trajet'}</button></div></form>`,
+    );
+    draft = { id: p.id || crypto.randomUUID(), kind, revision: p.revision, busy: false };
+    return;
+  }
   const fields =
     kind === 'events'
       ? `${selectField('Type de rendez-vous', 'category', EVENT_CATEGORIES, p.category || 'Rencontre')}<div class="form-grid"><label>Date<input type="date" name="date" value="${esc(p.date?.slice(0, 10) || '')}" required></label><label>Heure (facultative)<input type="time" name="eventTime" value="${esc(p.date?.split('T')[1] || '')}"></label><label>Capacité (0 = sans limite)<input type="number" name="capacity" min="0" max="500" value="${p.capacity ?? 0}" required></label></div>`
@@ -445,6 +455,7 @@ function clearSessionUI() {
   user = null;
   events = [];
   ads = [];
+  trips = [];
   members = [];
   clearPhotos();
   closeModal(false);
@@ -468,11 +479,12 @@ function refreshData(redraw = true) {
       const results = await Promise.allSettled([
         allPages('posts?kind=events', 'posts'),
         user ? allPages('posts?kind=ads', 'posts') : Promise.resolve([]),
+        user ? allPages('posts?kind=trips', 'posts') : Promise.resolve([]),
         isAdmin() ? allPages('admin/users', 'users') : Promise.resolve([]),
       ]);
       if (serial !== sessionGeneration()) return;
-      [events, ads, members] = results.map((r, i) =>
-        r.status === 'fulfilled' ? r.value : [events, ads, members][i],
+      [events, ads, trips, members] = results.map((r, i) =>
+        r.status === 'fulfilled' ? r.value : [events, ads, trips, members][i],
       );
       const failed = results.find((r) => r.status === 'rejected');
       loadError = failed && authConfig()?.accountsEnabled ? failed.reason.message : '';
@@ -629,12 +641,20 @@ document.addEventListener('submit', async (e) => {
         body.date = data.date + (data.eventTime ? 'T' + data.eventTime : '');
         body.capacity = Number(data.capacity);
       }
+      if (body.kind === 'trips') body.date = data.date + 'T' + data.tripTime;
       await request(currentDraft.revision ? 'posts/' + currentDraft.id : 'posts', {
         method: currentDraft.revision ? 'PATCH' : 'POST',
         body,
       });
       closeModal();
-      location.hash = currentDraft.kind === 'events' ? '#/evenements' : '#/annonces';
+      location.hash =
+        currentDraft.kind === 'events'
+          ? '#/evenements'
+          : currentDraft.kind === 'trips'
+            ? '#/trajets'
+            : '#/annonces';
+      query = '';
+      filter = 'Tout';
       toast('Publication enregistrée pour le village.');
     }
     if (form.id === 'registration-form') {

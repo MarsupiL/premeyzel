@@ -35,13 +35,15 @@ export function mountHunting(element, { account, onRequireAuth, dialog } = {}) {
   }
   function render(state) {
     if (destroyed) return;
-    status.textContent = state.stale
+    const statusText = state.stale
       ? state.loaded
         ? 'Informations non actualisées : la carte peut être incomplète. Reconnectez-vous pour vérifier les zones.'
         : 'Zones non vérifiées. Une connexion est nécessaire pour les afficher.'
       : state.zones.length
         ? 'Rouge : chasse en cours · Pointillés : chasse prévue. Horaires de Paris.'
         : 'Aucune zone de chasse signalée actuellement.';
+    // Avoid repeating identical announcements on every countdown tick.
+    if (status.textContent !== statusText) status.textContent = statusText;
     status.classList.toggle('warning', state.stale);
     const signature = state.zones
       .map((z) => `${z.id}:${z.revision}:${z.canManage}:${zonePhase(z, state.now)}`)

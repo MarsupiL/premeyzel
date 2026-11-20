@@ -313,7 +313,10 @@ function profileSection() {
   return `<section class="activity-section profile-section" aria-labelledby="profile-heading"><div class="section-heading"><div><h2 id="profile-heading">Mon profil</h2><p>Un nom et un visage pour se reconnaître entre voisins.</p></div><button class="btn secondary" data-action="edit-profile">${icon('edit')}Modifier mon profil</button></div><div class="profile-summary">${avatar(user, 'large')}<div><strong>${esc(user.name)}</strong><p>Votre photo est visible par les habitants connectés.</p></div></div><a class="text-link" href="#/messages">${icon('chat')}Retrouver mes messages</a></section>`;
 }
 async function profileDialog() {
-  user = await currentAccount();
+  const serial = ++detailRequest,
+    account = await currentAccount();
+  if (serial !== detailRequest) return;
+  user = account;
   if (!user) {
     location.hash = '#/connexion';
     return;
@@ -341,6 +344,7 @@ function privacyPage() {
   return `${title('EN CONFIANCE', 'Vos données personnelles', 'Les informations utilisées par l’application.')}<article class="privacy-copy"><p>Consultez la <a href="./confidentialite.html">politique de confidentialité</a> pour connaître les données utilisées, leur visibilité, leur conservation et les modalités de demande de suppression.</p><p>Contact : <a href="mailto:marsupil@gmail.com">marsupil@gmail.com</a>.</p></article>`;
 }
 function modal(heading, content, wide = false) {
+  detailRequest++;
   focusBeforeDialog = document.activeElement;
   $('#modal-root').innerHTML =
     `<dialog class="modal ${wide ? 'wide' : ''}" aria-labelledby="dialog-title"><header class="modal-header"><h2 id="dialog-title">${heading}</h2><button class="icon-button" data-action="close" aria-label="Fermer">${icon('close')}</button></header><div class="modal-body">${content}</div></dialog>`;
@@ -447,7 +451,9 @@ async function compose(kind, id) {
     );
     return;
   }
+  const serial = ++detailRequest;
   const p = id ? await request('posts/' + id) : {};
+  if (serial !== detailRequest) return;
   kind = p.kind || kind;
   if (id && !canManage(p)) throw new Error('Vous ne pouvez pas modifier cette publication.');
   if (kind === 'trips') {
@@ -481,7 +487,9 @@ async function compose(kind, id) {
   };
 }
 async function removeDialog(id) {
+  const serial = ++detailRequest;
   const p = await request('posts/' + id);
+  if (serial !== detailRequest) return;
   if (!canManage(p)) throw new Error('Cette action n’est pas autorisée.');
   modal(
     'Supprimer cette publication ?',
@@ -566,7 +574,7 @@ function refreshData(redraw = true) {
       loadError = failed && authConfig()?.accountsEnabled ? failed.reason.message : '';
     } catch (error) {
       if (serial === sessionGeneration() && !isSessionChange(error)) {
-        clearSessionUI();
+        if (error.status === 401 || error.status === 403) clearSessionUI();
         loadError = error.message;
       }
     } finally {
@@ -705,7 +713,21 @@ document.addEventListener('submit', async (e) => {
   form.dataset.saving = 'true';
   button.disabled = true;
   error.textContent = '';
-  const data = Object.fromEntries(new FormData(form));
+  const formData = new FormData(form),
+    data = Object.fromEntries(formData);
+  const fields = [...form.elements].filter(
+    (field) => field !== button && field.dataset.action !== 'close',
+  );
+  const disabled = fields.map((field) => field.disabled);
+  fields.forEach((field) => {
+    field.disabled = true;
+  });
+  const finish = (message) => {
+    const current = form.isConnected;
+    if (current) closeModal();
+    toast(message);
+    return current;
+  };
   try {
     let detailId = null;
     if (form.id === 'profile-form') {
@@ -719,8 +741,7 @@ document.addEventListener('submit', async (e) => {
           },
         })
       ).user;
-      closeModal();
-      toast('Votre profil a été enregistré.');
+      finish('Votre profil a été enregistré.');
     }
     if (form.id === 'post-form') {
       const currentDraft = draft;
@@ -730,49 +751,46 @@ document.addEventListener('submit', async (e) => {
         body.date = data.date + (data.eventTime ? 'T' + data.eventTime : '');
         body.capacity = Number(data.capacity);
       }
-      if (body.kind === 'trips') Object.assign(body, tripInput(new FormData(form)));
+      if (body.kind === 'trips') Object.assign(body, tripInput(formData));
       await request(currentDraft.revision ? 'posts/' + currentDraft.id : 'posts', {
         method: currentDraft.revision ? 'PATCH' : 'POST',
         body,
       });
-      closeModal();
-      location.hash =
-        currentDraft.kind === 'events'
-          ? '#/evenements'
-          : currentDraft.kind === 'trips'
-            ? '#/trajets'
-            : '#/annonces';
-      query = '';
-      filter = 'Tout';
-      toast('Publication enregistrée pour le village.');
+      if (finish('Publication enregistrée pour le village.')) {
+        location.hash =
+          currentDraft.kind === 'events'
+            ? '#/evenements'
+            : currentDraft.kind === 'trips'
+              ? '#/trajets'
+              : '#/annonces';
+        query = '';
+        filter = 'Tout';
+      }
     }
     if (form.id === 'registration-form') {
       await request('posts/' + form.dataset.id + '/registrations', {
         method: 'POST',
         body: { count: Number(data.count) },
       });
-      detailId = form.dataset.id;
-      closeModal();
-      toast('Votre inscription a été enregistrée.');
+      if (finish('Votre inscription a été enregistrée.')) detailId = form.dataset.id;
     }
     if (form.id === 'delete-form') {
       await request('posts/' + form.dataset.id, {
         method: 'DELETE',
         body: { revision: Number(form.dataset.revision) },
       });
-      closeModal();
-      toast('Publication retirée.');
+      finish('Publication retirée.');
     }
     if (form.id === 'role-form') {
       await request('admin/users/' + encodeURIComponent(form.dataset.id), {
         method: 'PATCH',
         body: { role: form.dataset.role, revision: Number(form.dataset.revision) },
       });
-      closeModal();
-      toast('Rôle mis à jour.');
+      finish('Rôle mis à jour.');
     }
-    await refreshData();
-    if (detailId) await detail(detailId);
+    const serial = detailRequest;
+    await refreshData(!hasActiveInput());
+    if (detailId && serial === detailRequest) await detail(detailId);
   } catch (err) {
     if (form.isConnected) {
       error.textContent = err.message;
@@ -781,6 +799,9 @@ document.addEventListener('submit', async (e) => {
     } else if (!isSessionChange(err)) toast(err.message);
   } finally {
     delete form.dataset.saving;
+    fields.forEach((field, index) => {
+      field.disabled = disabled[index];
+    });
   }
 });
 document.addEventListener('change', async (e) => {

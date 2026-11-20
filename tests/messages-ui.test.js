@@ -100,7 +100,7 @@ function fixture({ failSend = false } = {}) {
   vm.createContext(context);
   vm.runInContext(
     source +
-      `\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';pollCursor=1;peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={renderFeed,renderList,onSubmit,onClick,setDirectory:fn=>directory=fn,loadThread,setRequest:fn=>request=fn,setPages:fn=>allPages=fn,refreshInbox,setMessagingAccount,rows:()=>messages,getDraft:()=>drafts.get('test')};`,
+      `\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';pollCursor=1;peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={setContext:value=>context=value,renderFeed,renderList,onSubmit,onClick,setDirectory:fn=>directory=fn,loadThread,setRequest:fn=>request=fn,setPages:fn=>allPages=fn,refreshInbox,setMessagingAccount,rows:()=>messages,getDraft:()=>drafts.get('test')};`,
     context,
   );
   return {
@@ -243,4 +243,33 @@ test('polling catches up across multiple pages and sending does not skip unseen 
     Array.from(f.api.rows(), (row) => row.seq),
     Array.from({ length: 120 }, (_, i) => i + 1),
   );
+});
+
+test('removing a message reference changes its retry key and does not modify a pending send', async () => {
+  const f = fixture({ failSend: true });
+  f.api.setContext({ id: 'post', title: 'Annonce' });
+  await f.submit();
+  const first = f.calls.find((c) => c.path.endsWith('/messages'));
+  assert.equal(first.options.body.postId, 'post');
+  await f.api.onClick({ target: { closest: () => ({ dataset: { dm: 'clear-context' } }) } });
+  await f.submit();
+  const retry = f.calls.filter((c) => c.path.endsWith('/messages')).at(-1);
+  assert.notEqual(retry.options.body.id, first.options.body.id);
+  assert.equal(retry.options.body.postId, undefined);
+  const pending = fixture();
+  pending.api.setContext({ id: 'post', title: 'Annonce' });
+  let finish;
+  pending.api.setRequest(
+    async () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const sending = pending.submit(),
+    key = pending.api.getDraft().key;
+  await pending.api.onClick({ target: { closest: () => ({ dataset: { dm: 'clear-context' } }) } });
+  assert.equal(pending.api.getDraft().key, key);
+  finish({ message: { seq: 2, body: 'Sent', mine: true, created: Date.now() } });
+  pending.api.setRequest(async () => ({ peer: { name: 'Alice' }, messages: [], nextBefore: null }));
+  await sending;
 });

@@ -276,7 +276,10 @@ async function onClick(e) {
       if (activeId) await loadThread(!$('#dm-form'));
     }
     if (action === 'post') await ui.openPost(b.dataset.id);
-    if (action === 'clear-context') {
+    if (action === 'clear-context' && !busy) {
+      const draft = drafts.get(activeId);
+      if (draft) drafts.set(activeId, { ...draft, key: crypto.randomUUID() });
+      history.replaceState(null, '', '#/messages?c=' + activeId);
       context = null;
       $('#dm-context').replaceChildren();
     }

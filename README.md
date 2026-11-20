@@ -12,7 +12,7 @@ Google and email/password authentication; the backend owns roles and shared data
 - Profiles contain a name and optional photo. Contact details are not public profile fields.
 - Private conversations are accessible only to their two participants, including when an
   administrator signs in. Optional push alerts hide message text and sender identity.
-- Mon compte offers a per-device notification test. Unread messages update the Home
+- Mon compte offers per-device notification opt-in and opt-out. Unread messages update the Home
   Screen badge where supported; reading messages and signing out clear it as appropriate.
 - Members manage their own content. Administrators manage all content and roles; the
   owner's role is protected. All authorization is checked again on the server.
@@ -78,8 +78,7 @@ its fallback contains no sender or message text. Its conversation link still req
 authentication and participant membership. New public event alerts open that event;
 event alerts do not change the private-message badge. Login preserves notification
 destinations, and removed events show an unavailable notice. Each incoming message
-has a distinct alert tag, while retried submissions do not resend alerts. The test
-button reports provider acceptance separately from confirmed display on the device.
+has a distinct alert tag, while retried submissions do not resend alerts.
 
 The existing GitHub Pages origin is shared with other projects under this GitHub user.
 A dedicated domain/origin would isolate session storage from those projects. Backups,

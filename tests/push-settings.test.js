@@ -13,12 +13,14 @@ function fixture({
   subscribed = false,
   permission = 'default',
   pushSupported = true,
+  pushTestError = '',
 } = {}) {
   let stored = saved,
     sub = subscribed ? subscription() : null,
     unsubscribed = 0,
     requested = 0;
   const calls = [],
+    badges = [],
     events = {},
     section = { innerHTML: '' };
   function subscription() {
@@ -78,9 +80,19 @@ function fixture({
       calls.push({ path, options });
       if (path === 'push/config') return { enabled: true, publicKey: 'AQID' };
       if (path === 'push/status') return { subscribed: true };
+      if (path === 'push/test') {
+        if (pushTestError) throw new Error(pushTestError);
+        return { accepted: true };
+      }
       return { ok: true };
     },
     navigator: {
+      async setAppBadge(count) {
+        badges.push(count);
+      },
+      async clearAppBadge() {
+        badges.push(0);
+      },
       userAgent: 'Chrome',
       platform: 'MacIntel',
       maxTouchPoints: 0,
@@ -112,10 +124,15 @@ function fixture({
   context.window = context;
   if (!pushSupported) delete context.PushManager;
   vm.createContext(context);
-  vm.runInContext(source + '\nthis.pushAPI={syncPushAccount,disconnectPush,enable};', context);
+  vm.runInContext(
+    source +
+      '\nthis.pushAPI={syncPushAccount,disconnectPush,enable,testNotification,updateAppBadge};',
+    context,
+  );
   return {
     api: context.pushAPI,
     calls,
+    badges,
     events,
     section,
     get stored() {
@@ -145,6 +162,41 @@ test('notifications never prompt on account load, and enable only after an expli
   assert.equal(f.stored.enabled, true);
   assert.ok(f.calls.some((c) => c.path === 'push/subscription' && c.options.method === 'PUT'));
   assert.match(f.section.innerHTML, /Activées sur cet appareil/);
+});
+test('the test button uses this device subscription and distinguishes acceptance from delivery', async () => {
+  const f = fixture({
+    saved: { owner: 'alice', enabled: true },
+    subscribed: true,
+    permission: 'granted',
+  });
+  await f.api.syncPushAccount({ id: 'alice' });
+  assert.match(f.section.innerHTML, /Tester les notifications/);
+  await f.api.testNotification();
+  assert.equal(f.requested, 0);
+  const request = f.calls.find((c) => c.path === 'push/test');
+  assert.equal(request.options.method, 'POST');
+  assert.equal(request.options.body.endpoint, f.sub.endpoint);
+  assert.match(f.section.innerHTML, /Test accepté/);
+  assert.match(f.section.innerHTML, /Vérifiez qu’une alerte/);
+  const failed = fixture({
+    saved: { owner: 'alice', enabled: true },
+    subscribed: true,
+    permission: 'granted',
+    pushTestError: 'Service indisponible',
+  });
+  await failed.api.syncPushAccount({ id: 'alice' });
+  await failed.api.testNotification();
+  assert.match(failed.section.innerHTML, /Service indisponible/);
+  assert.doesNotMatch(failed.section.innerHTML, /Test accepté/);
+});
+test('unread badges update and logout clears them without prompting', async () => {
+  const f = fixture();
+  await f.api.updateAppBadge(4);
+  await f.api.updateAppBadge(-1);
+  await f.api.updateAppBadge(NaN);
+  await f.api.disconnectPush(true);
+  assert.deepEqual(f.badges, [4, 0]);
+  assert.equal(f.requested, 0);
 });
 test('logout removes delivery registration and account changes never inherit the old opt-in', async () => {
   const f = fixture({

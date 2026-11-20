@@ -10,6 +10,7 @@ const source = readFileSync(new URL('../messages-ui.js', import.meta.url), 'utf8
   .replaceAll('export ', '');
 function fixture({ failSend = false } = {}) {
   const calls = [],
+    badges = [],
     focus = [],
     nodes = {},
     document = { hidden: false, activeElement: null, querySelectorAll: () => [] };
@@ -74,6 +75,7 @@ function fixture({ failSend = false } = {}) {
   const context = {
     esc,
     normalizeSearch,
+    updateAppBadge: (count) => badges.push(count),
     document,
     navigator: { onLine: true },
     location: { hash: '#/messages?c=test' },
@@ -98,7 +100,7 @@ function fixture({ failSend = false } = {}) {
   vm.createContext(context);
   vm.runInContext(
     source +
-      `\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';pollCursor=1;peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={renderFeed,renderList,onSubmit,onClick,setDirectory:fn=>directory=fn,loadThread,setRequest:fn=>request=fn,rows:()=>messages,getDraft:()=>drafts.get('test')};`,
+      `\nroot=rootFixture;ui=uiFixture;viewer={id:'owner'};activeId='test';pollCursor=1;peer={name:'Alice'};messages=[${JSON.stringify(message)}];drafts.set('test',{text:'Bonjour Alice',key:'retry-id'});this.api={renderFeed,renderList,onSubmit,onClick,setDirectory:fn=>directory=fn,loadThread,setRequest:fn=>request=fn,setPages:fn=>allPages=fn,refreshInbox,setMessagingAccount,rows:()=>messages,getDraft:()=>drafts.get('test')};`,
     context,
   );
   return {
@@ -111,10 +113,30 @@ function fixture({ failSend = false } = {}) {
     document,
     focus,
     calls,
+    badges,
     writes: () => writes,
     submit: () => context.api.onSubmit({ target: form, preventDefault() {} }),
   };
 }
+test('refreshing unread messages updates the app badge and reading them clears it', async () => {
+  const f = fixture();
+  f.api.setPages(async () => [
+    {
+      id: 'test',
+      peer: { name: 'Alice' },
+      unread: 3,
+      preview: 'Bonjour',
+      updated: '2026-11-20T10:00:00Z',
+    },
+  ]);
+  await f.api.refreshInbox();
+  assert.equal(f.badges.at(-1), 3);
+  f.api.setPages(async () => []);
+  await f.api.refreshInbox();
+  assert.equal(f.badges.at(-1), 0);
+  f.api.setMessagingAccount(null, {});
+  assert.equal(f.badges.at(-1), 0);
+});
 
 test('French searches match accents, ligatures, case and extra spaces', () => {
   for (const [name, query] of [

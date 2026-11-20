@@ -13,7 +13,6 @@ function fixture({
   subscribed = false,
   permission = 'default',
   pushSupported = true,
-  pushTestError = '',
 } = {}) {
   let stored = saved,
     sub = subscribed ? subscription() : null,
@@ -80,10 +79,6 @@ function fixture({
       calls.push({ path, options });
       if (path === 'push/config') return { enabled: true, publicKey: 'AQID' };
       if (path === 'push/status') return { subscribed: true };
-      if (path === 'push/test') {
-        if (pushTestError) throw new Error(pushTestError);
-        return { accepted: true };
-      }
       return { ok: true };
     },
     navigator: {
@@ -125,8 +120,7 @@ function fixture({
   if (!pushSupported) delete context.PushManager;
   vm.createContext(context);
   vm.runInContext(
-    source +
-      '\nthis.pushAPI={syncPushAccount,disconnectPush,enable,testNotification,updateAppBadge};',
+    source + '\nthis.pushAPI={syncPushAccount,disconnectPush,enable,updateAppBadge};',
     context,
   );
   return {
@@ -163,31 +157,23 @@ test('notifications never prompt on account load, and enable only after an expli
   assert.ok(f.calls.some((c) => c.path === 'push/subscription' && c.options.method === 'PUT'));
   assert.match(f.section.innerHTML, /Activées sur cet appareil/);
 });
-test('the test button uses this device subscription and distinguishes acceptance from delivery', async () => {
+test('enabled notification settings offer only the device opt-out', async () => {
   const f = fixture({
     saved: { owner: 'alice', enabled: true },
     subscribed: true,
     permission: 'granted',
   });
   await f.api.syncPushAccount({ id: 'alice' });
-  assert.match(f.section.innerHTML, /Tester les notifications/);
-  await f.api.testNotification();
+  assert.match(f.section.innerHTML, /Activées sur cet appareil/);
+  assert.match(f.section.innerHTML, /Désactiver sur cet appareil/);
+  assert.doesNotMatch(f.section.innerHTML, /Tester les notifications|data-push-action="test"/);
+  f.events.click({ target: { closest: () => ({ dataset: { pushAction: 'disable' } }) } });
+  for (let n = 0; n < 20; n++) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(f.unsubscribed, 1);
   assert.equal(f.requested, 0);
-  const request = f.calls.find((c) => c.path === 'push/test');
-  assert.equal(request.options.method, 'POST');
-  assert.equal(request.options.body.endpoint, f.sub.endpoint);
-  assert.match(f.section.innerHTML, /Test accepté/);
-  assert.match(f.section.innerHTML, /Vérifiez qu’une alerte/);
-  const failed = fixture({
-    saved: { owner: 'alice', enabled: true },
-    subscribed: true,
-    permission: 'granted',
-    pushTestError: 'Service indisponible',
-  });
-  await failed.api.syncPushAccount({ id: 'alice' });
-  await failed.api.testNotification();
-  assert.match(failed.section.innerHTML, /Service indisponible/);
-  assert.doesNotMatch(failed.section.innerHTML, /Test accepté/);
+  assert.match(f.section.innerHTML, /Activer les notifications/);
+  assert.ok(f.calls.some((c) => c.path === 'push/subscription' && c.options.method === 'DELETE'));
+  assert.ok(f.calls.every((c) => c.path !== 'push/test'));
 });
 test('unread badges update and logout clears them without prompting', async () => {
   const f = fixture();

@@ -20,6 +20,8 @@ Google and email/password authentication; the backend owns roles and shared data
   GPS stays on the device. Map tiles and publication require Internet.
 - Signed-in residents can offer or request a ride with a destination, date and time.
   Trips use Europe/Paris time, sort upcoming departures first and link to private messages.
+  Ride offers display 0–8 available passenger seats, updated by the author or an admin;
+  0 is shown as full. The count applies to every departure of a recurring offer.
   Expired rides disappear. Regular rides have a weekly or fortnightly rule per weekday,
   anchored to their start date, with an optional end date; the server returns the next departure.
 - Apple login is not currently offered.

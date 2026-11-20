@@ -1,6 +1,6 @@
 import { escapeHTML as esc } from './html.js';
 import { normalizeSearch } from './search.js';
-import { tripsPage, tripFields, tripDetail } from './trips.js';
+import { tripsPage, tripFields, tripDetail, updateTripForm, tripInput } from './trips.js';
 import { emailForm, mountEmailForm, authFormBusy, authMode } from './auth-ui.js';
 import { pushSettings, syncPushAccount, disconnectPush } from './push-ui.js';
 import {
@@ -64,6 +64,7 @@ let user = null,
 const imageURLs = new Map();
 const imageLoads = new Map();
 let profileDraft = null;
+let tripExpiryTimer = null;
 let detailRequest = 0,
   linkedEvent = '';
 function avatar(person, cls = '') {
@@ -456,6 +457,7 @@ function clearSessionUI() {
   events = [];
   ads = [];
   trips = [];
+  clearTimeout(tripExpiryTimer);
   members = [];
   clearPhotos();
   closeModal(false);
@@ -463,6 +465,19 @@ function clearSessionUI() {
   setMessagingAccount(null, { avatar, loadPhotos, toast, modal, closeModal, openPost: detail });
   setTrailAccount(null);
   unmountTrails();
+}
+function scheduleTripExpiry() {
+  clearTimeout(tripExpiryTimer);
+  const next = Math.min(...trips.map((trip) => trip.departureAt));
+  if (!Number.isFinite(next)) return;
+  tripExpiryTimer = setTimeout(
+    () => {
+      trips = trips.filter((trip) => trip.departureAt > Date.now());
+      if (!hasActiveInput()) render();
+      refreshData(!hasActiveInput());
+    },
+    Math.max(50, Math.min(2147483647, next - Date.now() + 50)),
+  );
 }
 function refreshData(redraw = true) {
   const serial = sessionGeneration();
@@ -498,6 +513,7 @@ function refreshData(redraw = true) {
         refreshing = null;
         if (serial === sessionGeneration()) {
           loading = false;
+          scheduleTripExpiry();
           if (redraw) render();
         }
       }
@@ -641,7 +657,7 @@ document.addEventListener('submit', async (e) => {
         body.date = data.date + (data.eventTime ? 'T' + data.eventTime : '');
         body.capacity = Number(data.capacity);
       }
-      if (body.kind === 'trips') body.date = data.date + 'T' + data.tripTime;
+      if (body.kind === 'trips') Object.assign(body, tripInput(new FormData(form)));
       await request(currentDraft.revision ? 'posts/' + currentDraft.id : 'posts', {
         method: currentDraft.revision ? 'PATCH' : 'POST',
         body,
@@ -695,6 +711,7 @@ document.addEventListener('submit', async (e) => {
   }
 });
 document.addEventListener('change', async (e) => {
+  if (e.target.closest('.ride-form')) updateTripForm(e.target.form);
   if (e.target instanceof HTMLSelectElement) {
     const display = e.target.parentElement.querySelector('.select-value');
     if (display) display.textContent = e.target.selectedOptions[0]?.textContent || '';
@@ -809,6 +826,9 @@ function hasActiveInput() {
   );
 }
 window.addEventListener('online', () => refreshData(!hasActiveInput()));
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && route() === 'trajets') refreshData(!hasActiveInput());
+});
 window.addEventListener('offline', () => {
   if (hasActiveInput())
     toast('Hors connexion. Votre saisie reste ouverte ; reconnectez-vous pour l’envoyer.');

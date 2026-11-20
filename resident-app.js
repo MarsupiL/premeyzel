@@ -1,6 +1,14 @@
 import { escapeHTML as esc } from './html.js';
 import { normalizeSearch } from './search.js';
-import { tripsPage, tripFields, tripDetail, updateTripForm, tripInput } from './trips.js';
+import {
+  tripsPage,
+  tripResults,
+  tripDateHelp,
+  tripFields,
+  tripDetail,
+  updateTripForm,
+  tripInput,
+} from './trips.js';
 import { emailForm, mountEmailForm, authFormBusy, authMode } from './auth-ui.js';
 import { pushSettings, syncPushAccount, disconnectPush } from './push-ui.js';
 import {
@@ -67,6 +75,7 @@ let user = null,
 const imageURLs = new Map();
 const imageLoads = new Map();
 let profileDraft = null;
+let renderedAccount = '';
 let tripExpiryTimer = null;
 let detailRequest = 0,
   linkedEvent = '';
@@ -162,11 +171,40 @@ async function loadPhotos() {
 function canManage(post) {
   return !!user && post.canManage;
 }
+function currentTripView() {
+  return [
+    tripDate ? (filteredTripDate === tripDate ? filteredTrips : []) : trips,
+    {
+      filter,
+      query,
+      date: tripDate,
+      loading: loading || (!!tripDate && filteredTripDate !== tripDate),
+    },
+  ];
+}
+function updateTripResults() {
+  $('#trip-date-help').textContent = tripDateHelp(tripDate);
+  $('#trip-results').innerHTML = loadError
+    ? `<div class="notice warning" role="alert"><span>${esc(loadError)}</span><button class="btn secondary" data-action="refresh">Réessayer</button></div>`
+    : tripResults(...currentTripView());
+}
 function render() {
   if (authFormBusy()) return;
+  const r = route();
+  // Native calendars own their confirmation UI. Replacing or refocusing this
+  // input during a change (or an in-flight refresh) dismisses that UI on iOS.
+  if (
+    r === 'trajets' &&
+    user &&
+    renderedAccount === user.id &&
+    document.activeElement?.id === 'trip-date-filter'
+  ) {
+    updateTripResults();
+    return;
+  }
+  renderedAccount = user?.id || '';
   unmountTrails();
   unmountMessages();
-  const r = route();
   setTrailAccount(user);
   setMessagingAccount(user, { avatar, loadPhotos, toast, modal, closeModal, openPost: detail });
   $('#app').innerHTML =
@@ -203,13 +241,7 @@ function page(r) {
     return '<div id="trails-app"><p class="notice">Chargement des parcours…</p></div>';
   if (['trajets', 'annonces', 'compte', 'admin', 'messages'].includes(r) && !user)
     return loginPage();
-  if (r === 'trajets')
-    return tripsPage(tripDate ? (filteredTripDate === tripDate ? filteredTrips : []) : trips, {
-      filter,
-      query,
-      date: tripDate,
-      loading: loading || (!!tripDate && filteredTripDate !== tripDate),
-    });
+  if (r === 'trajets') return tripsPage(...currentTripView());
   if (r === 'messages') return '<div id="messages-app"></div>';
   if (r === 'compte') return accountPage();
   if (r === 'admin') return adminPage();
@@ -613,7 +645,7 @@ document.addEventListener('click', async (e) => {
       filteredTripDate = '';
       filteredTrips = [];
       render();
-      $('#trip-date-filter')?.focus({ preventScroll: true });
+      $('[data-action="clear-trip-date"]')?.focus({ preventScroll: true });
     }
     if (action === 'refresh') await refreshData();
     if (action === 'cancel-registration') {
@@ -754,7 +786,6 @@ document.addEventListener('change', async (e) => {
     filteredTripDate = '';
     filteredTrips = [];
     render();
-    $('#trip-date-filter')?.focus({ preventScroll: true });
     await refreshData();
     return;
   }

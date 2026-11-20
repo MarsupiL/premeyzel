@@ -117,3 +117,9 @@ creation/editing, author/admin permissions, expired-zone removal and disconnecte
 state using disposable local fixtures rather than real danger reports.
 
 Ride date filtering uses Paris calendar dates and the server’s recurrence rules, including weekly/fortnightly schedules and end dates. The selected occurrence appears in both cards and details; clearing the date restores all upcoming rides. Destination and offer/request filters remain combinable.
+
+The header feedback button opens a private problem/idea form. Feedback includes only
+its text, signed-in name and an allowlisted page label; no automatic device logs or
+location. The backend routes it to the protected owner and sends a separate email
+copy through Brevo. Replies remain normal in-app messages. Drafts are memory-only,
+cleared on sign-out, and keep a retry ID after a failed request to avoid duplicates.

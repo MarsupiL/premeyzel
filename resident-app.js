@@ -24,6 +24,7 @@ import {
   openContact,
 } from './messages-ui.js';
 import { icon } from './icons.js';
+import { openFeedback, clearFeedbackDraft } from './feedback-ui.js';
 import { villageArt, cardArt } from './art.js';
 import { defaultArt, preparePhoto, photoSource } from './photos.js';
 import { API_BASE, request, allPages, sessionGeneration, isSessionChange } from './api-client.js';
@@ -208,7 +209,7 @@ function render() {
   setTrailAccount(user);
   setMessagingAccount(user, { avatar, loadPhotos, toast, modal, closeModal, openPost: detail });
   $('#app').innerHTML =
-    `<header class="topbar"><a href="#/accueil" class="brand" aria-label="Prémeyzel, accueil"><img src="./assets/icon.svg" alt="" width="42" height="42"><span>Prémeyzel<small>ENTRE VOISINS</small></span></a><div class="header-actions">${user ? `<a class="icon-button messages-link" href="#/messages" data-message-link aria-label="Messages">${icon('chat')}<span class="unread-count" data-message-count hidden></span></a>` : ''}<button class="icon-button" data-action="install" aria-label="Installer l’application">${icon('download')}</button><a href="#/${user ? 'compte' : 'connexion'}" class="profile-button" aria-label="${user ? 'Mon compte · ' + esc(user.name) : 'Se connecter'}">${user ? avatar(user) : `<span class="avatar">${icon('user')}</span>`}<span>${user ? esc(firstName()) : 'Se connecter'}<small>${user ? roleName(user.role) : 'Rejoindre le village'}</small></span>${icon('chevron')}</a></div></header>
+    `<header class="topbar"><a href="#/accueil" class="brand" aria-label="Prémeyzel, accueil"><img src="./assets/icon.svg" alt="" width="42" height="42"><span>Prémeyzel<small>ENTRE VOISINS</small></span></a><div class="header-actions">${user ? `<button class="icon-button feedback-button" data-action="feedback" aria-label="Envoyer un retour" title="Un problème ou une idée ?">${icon('flag')}</button><a class="icon-button messages-link" href="#/messages" data-message-link aria-label="Messages">${icon('chat')}<span class="unread-count" data-message-count hidden></span></a>` : ''}<button class="icon-button" data-action="install" aria-label="Installer l’application">${icon('download')}</button><a href="#/${user ? 'compte' : 'connexion'}" class="profile-button" aria-label="${user ? 'Mon compte · ' + esc(user.name) : 'Se connecter'}">${user ? avatar(user) : `<span class="avatar">${icon('user')}</span>`}<span>${user ? esc(firstName()) : 'Se connecter'}<small>${user ? roleName(user.role) : 'Rejoindre le village'}</small></span>${icon('chevron')}</a></div></header>
  <div class="layout"><aside class="sidebar"><nav aria-label="Navigation principale">${navs.map(([key, i, label]) => `<a href="#/${key}" class="nav-item ${r === key ? 'active' : ''}" ${r === key ? 'aria-current="page"' : ''}>${icon(i)}<span>${label}</span></a>`).join('')}</nav><div class="sidebar-divider"></div>${user ? `<a href="#/compte" class="nav-item ${r === 'compte' ? 'active' : ''}">${icon('user')}Mon compte</a><a href="#/messages" class="nav-item ${r === 'messages' ? 'active' : ''}" data-message-link>${icon('chat')}Messages<span class="unread-count" data-message-count hidden></span></a>` : ''}${isAdmin() ? `<a href="#/admin" class="nav-item ${r === 'admin' ? 'active' : ''}">${icon('shield')}Administration</a>` : ''}<div class="sidebar-note">${icon('leaf')}<h3>Un village.<br>Mille petits liens.</h3><p>Des rencontres, des coups de main et des chemins à partager.</p></div><a class="sidebar-footer" href="./confidentialite.html">Vos données personnelles</a><a class="sidebar-footer" href="./conditions.html">Conditions d’utilisation</a><p class="sidebar-footer">Initiative communautaire indépendante<br>Prémeyzel · Bugey Sud</p></aside>
  <main id="main" tabindex="-1">${authConfig() && !authConfig().accountsEnabled ? '<p class="notice warning" role="status">Aperçu de la prochaine version · les inscriptions ne sont pas encore ouvertes.</p>' : ''}${loadError ? `<div class="notice warning" role="alert"><span>${esc(loadError)}</span><button class="btn secondary" data-action="refresh">Réessayer</button></div>` : ''}${!navigator.onLine ? '<p class="notice">Hors connexion · la connexion et les publications nécessitent Internet.</p>' : ''}${page(r)}</main></div>
  <nav class="mobile-nav" aria-label="Navigation mobile">${navs.map(([key, i, label]) => `<a href="#/${key}" ${r === key ? 'aria-current="page"' : ''}>${icon(i)}<span>${key === 'annonces' ? 'Annonces' : key === 'accueil' ? 'Village' : label}</span></a>`).join('')}</nav>`;
@@ -497,6 +498,7 @@ function roleDialog(id) {
   );
 }
 function clearSessionUI() {
+  clearFeedbackDraft();
   user = null;
   events = [];
   ads = [];
@@ -610,6 +612,7 @@ document.addEventListener('click', async (e) => {
     if (action === 'delete') await removeDialog(id);
     if (action === 'change-role') roleDialog(id);
     if (action === 'edit-profile') await profileDialog();
+    if (action === 'feedback') openFeedback(user, route(), { modal, refreshInbox });
     if (action === 'contact') {
       b.disabled = true;
       await openContact({ postId: id });

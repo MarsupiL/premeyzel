@@ -9,6 +9,7 @@ const FILES = [
   './resident-app.js',
   './trips.js',
   './messages-ui.js',
+  './feedback-ui.js',
   './search.js',
   './html.js',
   './push-ui.js',

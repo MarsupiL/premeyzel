@@ -77,8 +77,16 @@ self.addEventListener('fetch', (event) => {
 
 const conversationID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 async function pushState() {
-  const cache = await caches.open('premeyzel-push-state-v1');
-  return (await cache.match(new URL('./push-state', self.registration.scope).href))?.json() || {};
+  try {
+    const cache = await caches.open('premeyzel-push-state-v1');
+    return (
+      (await (await cache.match(new URL('./push-state', self.registration.scope).href))?.json()) ||
+      {}
+    );
+  } catch {
+    // Declarative-capable browsers can still display the generic server fallback.
+    return {};
+  }
 }
 self.addEventListener('push', (event) => {
   event.waitUntil(
@@ -89,16 +97,35 @@ self.addEventListener('push', (event) => {
       } catch {
         return;
       }
-      if (data?.type !== 'message' || !conversationID.test(data.conversationId || '')) return;
+      const test = data?.type === 'test';
+      if (!test && (data?.type !== 'message' || !conversationID.test(data.conversationId || '')))
+        return;
       const state = await pushState();
-      // Reject delayed notifications from a previous account on a shared device.
+      // Only an active matching account gets conversation-specific click data.
+      // A declarative browser may show the generic fallback after sign-out;
+      // that fallback contains no message text, sender or conversation link.
       if (!state.enabled || state.owner !== data.recipientId) return;
-      await self.registration.showNotification('Prémeyzel · Nouveau message', {
-        body: 'Vous avez reçu un message privé. Ouvrez Prémeyzel pour le lire.',
-        icon: new URL('./assets/icon-192.png', self.registration.scope).href,
-        tag: 'premeyzel-message-' + data.conversationId,
-        data: { conversationId: data.conversationId, recipientId: data.recipientId },
-      });
+      await self.registration.showNotification(
+        test ? 'Prémeyzel · Test de notification' : 'Prémeyzel · Nouveau message',
+        {
+          body: test
+            ? 'Les notifications fonctionnent sur cet appareil. Aucun message n’a été ajouté.'
+            : 'Vous avez reçu un message privé. Ouvrez Prémeyzel pour le lire.',
+          icon: new URL('./assets/icon-192.png', self.registration.scope).href,
+          tag: test ? 'premeyzel-notification-test' : 'premeyzel-message-' + data.conversationId,
+          data: {
+            type: data.type,
+            conversationId: data.conversationId,
+            recipientId: data.recipientId,
+          },
+        },
+      );
+      if (!test && Number.isSafeInteger(data.unreadCount) && data.unreadCount >= 0) {
+        try {
+          await self.navigator?.setAppBadge?.(data.unreadCount);
+        } catch {}
+      }
+      if (test) return;
       const windows = await self.clients.matchAll({ type: 'window' });
       windows.forEach((client) => client.postMessage({ type: 'premeyzel-new-message' }));
     })(),
@@ -111,13 +138,14 @@ self.addEventListener('notificationclick', (event) => {
       const state = await pushState(),
         data = event.notification.data || {},
         url = new URL('./', self.registration.scope);
+      const sameAccount = state.enabled && state.owner === data.recipientId;
       url.hash =
-        '#/messages' +
-        (state.enabled &&
-        state.owner === data.recipientId &&
-        conversationID.test(data.conversationId || '')
-          ? '?c=' + data.conversationId
-          : '');
+        sameAccount && data.type === 'test'
+          ? '#/compte'
+          : '#/messages' +
+            (sameAccount && conversationID.test(data.conversationId || '')
+              ? '?c=' + data.conversationId
+              : '');
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const app = windows.find((client) => {
         const u = new URL(client.url);

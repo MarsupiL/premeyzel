@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { API_BASE, setTokenProvider, request, invalidateSessionRequests } from './api-client.js';
+import {
+  rememberNotificationDestination,
+  takeNotificationDestination,
+} from './notification-links.js';
 let client = null,
   configuration = null,
   recovery = null,
@@ -143,7 +147,7 @@ export async function initializeAuth(onChange) {
         ? '#/connexion?mode=reset'
         : failure || returned.searchParams.has('error')
           ? '#/connexion'
-          : '#/compte';
+          : takeNotificationDestination() || '#/compte';
     history.replaceState(null, '', url.pathname + url.search + url.hash);
     if (returned.searchParams.has('error'))
       failure = new Error(
@@ -161,6 +165,7 @@ export function authConfig() {
 export async function signIn(provider) {
   if (provider !== 'google' || !client || !configuration.providers.google)
     throw new Error('Ce mode de connexion n’est pas disponible.');
+  rememberNotificationDestination();
   await checked(
     authClient().signInWithOAuth({
       provider,
@@ -227,6 +232,7 @@ export async function signOut() {
     if (error) throw error;
   }
   rememberRecovery(null);
+  takeNotificationDestination();
 }
 export async function currentAccount() {
   const { user } = await request('me');

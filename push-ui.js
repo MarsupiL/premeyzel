@@ -70,7 +70,7 @@ function changed() {
 }
 function content() {
   let text =
-      'Recevez une alerte pour vos nouveaux messages, même lorsque l’application est fermée. Le contenu des messages reste masqué.',
+      'Recevez une alerte pour vos nouveaux messages et les nouveaux événements du village, même lorsque l’application est fermée. Le contenu des messages reste masqué.',
     button = '';
   if (ios() && !standalone())
     text =
@@ -81,7 +81,7 @@ function content() {
   else {
     if (enabled)
       text =
-        'Activées sur cet appareil. Une alerte vous prévient des nouveaux messages, même lorsque l’application est fermée. Le contenu des messages reste masqué.';
+        'Activées sur cet appareil. Une alerte vous prévient des nouveaux messages et des nouveaux événements du village, même lorsque l’application est fermée. Le contenu des messages reste masqué.';
     else if (Notification.permission === 'denied')
       text =
         'Les notifications sont bloquées. Autorisez-les dans les réglages de ce site ou de votre appareil, puis revenez ici.';
@@ -95,7 +95,7 @@ function content() {
         ? `<button class="btn primary" data-push-action="enable" ${busy || !config ? 'disabled' : ''}>${busy ? 'Veuillez patienter…' : 'Activer les notifications'}</button>`
         : '';
   }
-  return `<div><h2>Notifications des messages</h2><p>${text}</p><p class="fine">Ce choix est propre à chaque appareil. La livraison dépend de la connexion Internet et des réglages de notifications de votre appareil.</p>${notice ? `<p role="status">${esc(notice)}</p>` : ''}${error ? `<p class="form-error" role="alert">${esc(error)}</p>` : ''}</div>${button}`;
+  return `<div><h2>Notifications du village</h2><p>${text}</p><p class="fine">Ce choix est propre à chaque appareil. La livraison dépend de la connexion Internet et des réglages de notifications de votre appareil.</p>${notice ? `<p role="status">${esc(notice)}</p>` : ''}${error ? `<p class="form-error" role="alert">${esc(error)}</p>` : ''}</div>${button}`;
 }
 export function pushSettings() {
   return `<section class="activity-section push-settings" data-push-settings aria-live="polite">${content()}</section>`;

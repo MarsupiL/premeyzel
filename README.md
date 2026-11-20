@@ -74,7 +74,11 @@ have independent server limits. The server remains authoritative for permissions
 Recent Apple devices can display the server's generic declarative notification even
 if background JavaScript or local storage is unavailable. Older browsers use the
 service-worker handler. A queued generic alert/badge can arrive briefly after sign-out;
-its fallback contains no sender, message text or account-specific navigation. The test
+its fallback contains no sender or message text. Its conversation link still requires
+authentication and participant membership. New public event alerts open that event;
+event alerts do not change the private-message badge. Login preserves notification
+destinations, and removed events show an unavailable notice. Each incoming message
+has a distinct alert tag, while retried submissions do not resend alerts. The test
 button reports provider acceptance separately from confirmed display on the device.
 
 The existing GitHub Pages origin is shared with other projects under this GitHub user.

@@ -11,6 +11,7 @@ const FILES = [
   './search.js',
   './html.js',
   './push-ui.js',
+  './notification-links.js',
   './resident.css',
   './icons.js',
   './api-client.js',
@@ -98,34 +99,56 @@ self.addEventListener('push', (event) => {
         return;
       }
       const test = data?.type === 'test';
-      if (!test && (data?.type !== 'message' || !conversationID.test(data.conversationId || '')))
+      const villageEvent = data?.type === 'event' && conversationID.test(data.eventId || '');
+      if (
+        !test &&
+        !villageEvent &&
+        (data?.type !== 'message' || !conversationID.test(data.conversationId || ''))
+      )
         return;
       const state = await pushState();
       // Only an active matching account gets conversation-specific click data.
-      // A declarative browser may show the generic fallback after sign-out;
-      // that fallback contains no message text, sender or conversation link.
+      // Declarative fallbacks contain no private text or sender. Conversation
+      // destinations still require authentication and server-side membership.
       if (!state.enabled || state.owner !== data.recipientId) return;
       await self.registration.showNotification(
-        test ? 'Prémeyzel · Test de notification' : 'Prémeyzel · Nouveau message',
+        test
+          ? 'Prémeyzel · Test de notification'
+          : villageEvent
+            ? 'Prémeyzel · Nouvel événement'
+            : 'Prémeyzel · Nouveau message',
         {
           body: test
             ? 'Les notifications fonctionnent sur cet appareil. Aucun message n’a été ajouté.'
-            : 'Vous avez reçu un message privé. Ouvrez Prémeyzel pour le lire.',
+            : villageEvent
+              ? String(data.eventTitle || 'Un nouveau rendez-vous au village.').slice(0, 100)
+              : 'Vous avez reçu un message privé. Ouvrez Prémeyzel pour le lire.',
           icon: new URL('./assets/icon-192.png', self.registration.scope).href,
-          tag: test ? 'premeyzel-notification-test' : 'premeyzel-message-' + data.conversationId,
+          tag: test
+            ? 'premeyzel-notification-test'
+            : villageEvent
+              ? 'premeyzel-event-' + data.eventId
+              : 'premeyzel-message-' +
+                (conversationID.test(data.messageId || '') ? data.messageId : data.conversationId),
           data: {
             type: data.type,
             conversationId: data.conversationId,
+            eventId: data.eventId,
             recipientId: data.recipientId,
           },
         },
       );
-      if (!test && Number.isSafeInteger(data.unreadCount) && data.unreadCount >= 0) {
+      if (
+        !test &&
+        !villageEvent &&
+        Number.isSafeInteger(data.unreadCount) &&
+        data.unreadCount >= 0
+      ) {
         try {
           await self.navigator?.setAppBadge?.(data.unreadCount);
         } catch {}
       }
-      if (test) return;
+      if (test || villageEvent) return;
       const windows = await self.clients.matchAll({ type: 'window' });
       windows.forEach((client) => client.postMessage({ type: 'premeyzel-new-message' }));
     })(),
@@ -140,12 +163,15 @@ self.addEventListener('notificationclick', (event) => {
         url = new URL('./', self.registration.scope);
       const sameAccount = state.enabled && state.owner === data.recipientId;
       url.hash =
-        sameAccount && data.type === 'test'
-          ? '#/compte'
-          : '#/messages' +
-            (sameAccount && conversationID.test(data.conversationId || '')
-              ? '?c=' + data.conversationId
-              : '');
+        data.type === 'event'
+          ? '#/evenements' +
+            (conversationID.test(data.eventId || '') ? '?event=' + data.eventId : '')
+          : sameAccount && data.type === 'test'
+            ? '#/compte'
+            : '#/messages' +
+              (sameAccount && conversationID.test(data.conversationId || '')
+                ? '?c=' + data.conversationId
+                : '');
       const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const app = windows.find((client) => {
         const u = new URL(client.url);

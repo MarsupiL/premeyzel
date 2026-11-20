@@ -3,6 +3,11 @@ import { normalizeSearch } from './search.js';
 import { emailForm, mountEmailForm, authFormBusy, authMode } from './auth-ui.js';
 import { pushSettings, syncPushAccount, disconnectPush } from './push-ui.js';
 import {
+  notificationDestination,
+  rememberNotificationDestination,
+  takeNotificationDestination,
+} from './notification-links.js';
+import {
   setMessagingAccount,
   mountMessages,
   unmountMessages,
@@ -57,6 +62,8 @@ let user = null,
 const imageURLs = new Map();
 const imageLoads = new Map();
 let profileDraft = null;
+let detailRequest = 0,
+  linkedEvent = '';
 function avatar(person, cls = '') {
   const photo = person?.photo,
     initial = person?.name?.trim().slice(0, 1).toUpperCase() || '?';
@@ -172,12 +179,16 @@ function render() {
     });
   mountEmailForm(async (message) => {
     await refreshData(false);
-    location.hash = '#/compte';
+    location.hash = takeNotificationDestination() || '#/compte';
     render();
     if (message) toast(message);
   });
   loadPhotos();
   if (user) syncPushAccount(user);
+  // OAuth returns without a hash. Keep its saved destination until auth initialization
+  // has consumed it; the initial signed-out shell must not erase that value.
+  if (!user && !loading) rememberNotificationDestination();
+  openLinkedEvent();
 }
 function page(r) {
   if (r === 'connexion') return loginPage();
@@ -304,7 +315,12 @@ function modal(heading, content, wide = false) {
   });
   loadPhotos();
 }
-function closeModal() {
+function closeModal(clearLink = true) {
+  detailRequest++;
+  if (clearLink && linkedEvent && notificationDestination(location.hash) === linkedEvent) {
+    history.replaceState(null, '', '#/evenements');
+    linkedEvent = '';
+  }
   draft = null;
   profileDraft = null;
   const d = $('dialog');
@@ -316,8 +332,11 @@ const formError = () => '<p class="form-error" role="alert" tabindex="-1"></p>';
 function selectField(label, name, values, value) {
   return `<label><span class="field-label">${label}</span><span class="select-control"><select name="${name}">${values.map((v) => `<option ${v === value ? 'selected' : ''}>${v}</option>`).join('')}</select><span class="select-value" aria-hidden="true">${esc(value || values[0])}</span></span></label>`;
 }
-async function detail(id) {
+async function detail(id, expectedHash = '') {
+  const serial = ++detailRequest;
   const p = await request('posts/' + encodeURIComponent(id));
+  if (serial !== detailRequest || (expectedHash && location.hash !== expectedHash)) return;
+  if (expectedHash && p.kind !== 'events') throw new Error('Cet événement n’est plus disponible.');
   let extra;
   if (p.kind === 'events') {
     extra = `<div class="detail-facts"><span>${icon('calendar')}${dateText(p.date)} · ${p.date.split('T')[1] || 'Horaire à préciser'}</span><span>${icon('users')}${p.used}${p.capacity ? ' / ' + p.capacity : ''} personnes inscrites</span></div>`;
@@ -327,13 +346,30 @@ async function detail(id) {
       extra += `<section class="booking-box"><h3>Votre inscription</h3><p>${p.registration.count} personne(s) · ${badge(p.registration.status === 'confirmed' ? 'Confirmé' : 'Liste d’attente', p.registration.status === 'waiting' ? 'amber' : '')}</p><button class="btn secondary" data-action="cancel-registration" data-id="${p.id}">Annuler mon inscription</button></section>`;
     else if (user)
       extra += `<form id="registration-form" data-id="${p.id}" class="booking-box"><h3>On vous garde une place ?</h3><p>Si les places manquent, votre groupe rejoint la liste d’attente.</p><div class="inline-form"><label>Nombre de personnes<input type="number" name="count" value="1" min="1" max="${Math.min(p.capacity || 50, 50)}" required></label><button class="btn primary" type="submit">M’inscrire</button></div>${formError()}</form>`;
-    else extra += '<a class="btn primary" href="#/connexion">Me connecter pour participer</a>';
+    else
+      extra += `<a class="btn primary" href="#/connexion?next=${encodeURIComponent('#/evenements?event=' + p.id)}">Me connecter pour participer</a>`;
   } else extra = `<p class="detail-price">${esc(p.price || 'À convenir')}</p>`;
   modal(
     esc(p.title),
     `<div class="detail-art">${visual(p, p.kind)}</div><div class="detail-top">${badge(p.category)}<span class="author">${esc(p.authorName || 'Un habitant')}</span></div><p class="detail-description">${esc(p.description)}</p><p class="meta">${icon('pin')}${esc(p.location)}</p>${p.contact ? `<section class="booking-box"><h3>Pour prendre contact</h3><p class="contact-text">${esc(p.contact)}</p></section>` : ''}${extra}${p.canContact ? `<button class="btn primary" data-action="contact" data-id="${p.id}">${icon('chat')}Contacter ${esc(p.authorName || 'l’auteur')}</button>` : ''}${canManage(p) ? `<div class="management"><button class="text-link" data-action="edit" data-id="${p.id}">${icon('edit')}Modifier</button><button class="text-link danger" data-action="delete" data-id="${p.id}">${icon('trash')}Supprimer</button></div>` : ''}`,
     true,
   );
+}
+async function openLinkedEvent() {
+  const hash = notificationDestination(location.hash);
+  if (loading || !hash.startsWith('#/evenements?event=')) return;
+  if (linkedEvent === hash) return;
+  linkedEvent = hash;
+  const expected = location.hash;
+  try {
+    await detail(new URLSearchParams(hash.split('?')[1]).get('event'), expected);
+  } catch (error) {
+    if (location.hash !== expected || isSessionChange(error)) return;
+    modal(
+      'Événement indisponible',
+      `<p role="alert">${esc(error.message)}</p><a class="btn secondary" href="#/evenements">Voir les événements</a>`,
+    );
+  }
 }
 async function compose(kind, id) {
   if (!user) {
@@ -411,7 +447,8 @@ function clearSessionUI() {
   ads = [];
   members = [];
   clearPhotos();
-  closeModal();
+  closeModal(false);
+  linkedEvent = '';
   setMessagingAccount(null, { avatar, loadPhotos, toast, modal, closeModal, openPost: detail });
   setTrailAccount(null);
   unmountTrails();
@@ -731,7 +768,8 @@ document.addEventListener(
   true,
 );
 window.addEventListener('hashchange', () => {
-  closeModal();
+  closeModal(false);
+  linkedEvent = '';
   query = '';
   filter = 'Tout';
   render();

@@ -12,6 +12,7 @@ const files = [
   'search.js',
   'html.js',
   'push-ui.js',
+  'notification-links.js',
   'resident.css',
   'icons.js',
   'api-client.js',

@@ -19,8 +19,29 @@ const SAMPLE_ART = [
   'forest',
   'mountain',
 ];
-export const defaultArt = (type) =>
-  ({ events: 'table', trips: 'campervan', ads: 'plant', trails: 'forest' })[type] || 'plant';
+const CATEGORY_ART = {
+  events: {
+    Rencontre: 'event-meeting',
+    Convivialité: 'event-table',
+    Atelier: 'event-workshop',
+    Sport: 'event-sport',
+    Culture: 'event-culture',
+  },
+  ads: {
+    'À donner': 'ad-give',
+    'À louer': 'ad-rent',
+    'À prêter': 'ad-lend',
+    'À échanger': 'ad-swap',
+    Services: 'ad-services',
+    'Je recherche': 'ad-wanted',
+    'À vendre': 'ad-sell',
+    'Perdu / trouvé': 'ad-lost',
+  },
+};
+export const defaultArt = (type, category) =>
+  Object.getOwnPropertyDescriptor(CATEGORY_ART[type] || {}, category)?.value ||
+  { events: 'table', trips: 'campervan', ads: 'plant', trails: 'forest' }[type] ||
+  'plant';
 export const samplePhoto = (art) => (SAMPLE_ART.includes(art) ? `sample:${art}` : null);
 export function validPhoto(photo) {
   return (

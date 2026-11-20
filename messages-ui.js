@@ -1,5 +1,6 @@
 import {request,allPages} from './api-client.js';
 import {icon} from './icons.js';
+import {normalizeSearch} from './search.js';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=v=>new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(v));
 let viewer=null,ui={},root=null,epoch=0,timer=null,inbox=[],drafts=new Map(),messages=[],nextBefore=null,peer=null,context=null,activeId='',busy=false,polling=false,inboxRequest=0;
@@ -16,8 +17,11 @@ export async function refreshInbox(){
 function status(text){if($('#dm-status'))$('#dm-status').textContent=text;}
 function renderList(){
  const list=$('#dm-list');if(!list)return;
- list.innerHTML=inbox.length?inbox.map(c=>`<a href="#/messages?c=${c.id}" class="dm-conversation ${c.id===activeId?'selected':''}" ${c.id===activeId?'aria-current="page"':''}>${ui.avatar(c.peer)}<span class="dm-summary"><strong>${esc(c.peer.name)}</strong><span>${c.mine?'Vous : ':''}${esc(c.preview)}</span><small>${date(c.updated)}</small></span>${c.unread?`<span class="unread-count" aria-label="${c.unread} messages non lus">${c.unread}</span>`:''}</a>`).join(''):'<p class="dm-empty-list">Vos conversations apparaîtront ici après le premier message.</p>';
- ui.loadPhotos();
+ const html=inbox.length?inbox.map(c=>`<a href="#/messages?c=${c.id}" class="dm-conversation ${c.id===activeId?'selected':''}" ${c.id===activeId?'aria-current="page"':''}>${ui.avatar(c.peer)}<span class="dm-summary"><strong>${esc(c.peer.name)}</strong><span>${c.mine?'Vous : ':''}${esc(c.preview)}</span><small>${date(c.updated)}</small></span>${c.unread?`<span class="unread-count" aria-label="${c.unread} messages non lus">${c.unread}</span>`:''}</a>`).join(''):'<p class="dm-empty-list">Vos conversations apparaîtront ici après le premier message.</p>';
+ if(list.dataset.rendered===html)return;
+ const focused=document.activeElement?.closest('.dm-conversation'),focusedHref=list.contains(focused)?focused.getAttribute('href'):null;
+ list.innerHTML=html;list.dataset.rendered=html;ui.loadPhotos();
+ if(focusedHref)Array.from(list.querySelectorAll('.dm-conversation')).find(link=>link.getAttribute('href')===focusedHref)?.focus({preventScroll:true});
 }
 export function unmountMessages(){epoch++;clearInterval(timer);timer=null;root=null;activeId='';messages=[];nextBefore=null;peer=null;context=null;busy=false;polling=false;}
 export function mountMessages(element){
@@ -29,10 +33,10 @@ export function mountMessages(element){
  timer=setInterval(()=>{if(!document.hidden&&navigator.onLine&&serial===epoch){refreshInbox();if(activeId&&!busy)loadThread();}},8000);
 }
 function mergeRows(rows){messages=[...new Map([...messages,...rows].map(m=>[m.seq,m])).values()].sort((a,b)=>a.seq-b.seq);}
-function renderFeed(forceBottom=false){
+function renderFeed(forceBottom=false,prepend=false){
  const feed=$('#dm-feed');if(!feed)return;const wasBottom=feed.scrollHeight-feed.scrollTop-feed.clientHeight<80,oldHeight=feed.scrollHeight,oldTop=feed.scrollTop;
  const html=messages.length?messages.map(m=>`<article class="dm-message ${m.mine?'mine':''}"><span class="sr-only">${m.mine?'Vous':esc(peer.name)} :</span>${m.post?`<button class="dm-post" data-dm="post" data-id="${m.post.id}">À propos de : ${esc(m.post.title)}</button>`:''}<p>${esc(m.body)}</p><time datetime="${new Date(m.created).toISOString()}">${date(m.created)}</time></article>`).join(''):'<p class="dm-intro">Votre premier message ne sera envoyé qu’en cliquant sur « Envoyer ».</p>';
- if(feed.innerHTML!==html){feed.innerHTML=html;feed.scrollTop=forceBottom||wasBottom?feed.scrollHeight:oldTop+(feed.scrollHeight-oldHeight);}
+ if(feed.innerHTML!==html){feed.innerHTML=html;feed.scrollTop=prepend?oldTop+(feed.scrollHeight-oldHeight):forceBottom||wasBottom?feed.scrollHeight:oldTop;}
  const older=$('#dm-older');if(older)older.hidden=!nextBefore;
 }
 async function loadThread(initial=false,postId=null){
@@ -56,34 +60,37 @@ export async function openContact(input){
 }
 async function directory(){
  const serial=epoch;status('');const residents=await allPages('residents','residents');if(serial!==epoch)return;
- ui.modal('Nouveau message',`<label class="search-box"><span class="sr-only">Rechercher un habitant</span><input id="dm-resident-search" type="search" placeholder="Rechercher un habitant…"></label><div class="dm-residents">${residents.map(r=>`<button type="button" class="dm-resident" data-recipient="${esc(r.id)}" data-name="${esc(r.name)}">${ui.avatar(r)}<span>${esc(r.name)}</span>${icon('chat')}</button>`).join('')||'<p>Aucun autre habitant n’a encore créé de compte.</p>'}</div><p id="dm-directory-empty" hidden>Aucun habitant ne correspond à votre recherche.</p><p class="form-error" role="alert"></p>`);
+ ui.modal('Nouveau message',`<label class="search-box dm-directory-search">${icon('search')}<span class="sr-only">Rechercher un habitant</span><input id="dm-resident-search" type="search" placeholder="Rechercher un habitant…" autocomplete="off" autofocus aria-controls="dm-directory-results"></label><div id="dm-directory-results" class="dm-residents">${residents.map(r=>`<button type="button" class="dm-resident" data-recipient="${esc(r.id)}" data-name="${esc(r.name)}">${ui.avatar(r)}<span>${esc(r.name)}</span>${icon('chat')}</button>`).join('')||'<p>Aucun autre habitant n’a encore créé de compte.</p>'}</div><p id="dm-directory-empty" role="status" hidden>Aucun habitant ne correspond à votre recherche.</p><p class="form-error" role="alert"></p>`);
  const dialog=document.querySelector('dialog[open]');
- dialog.querySelector('#dm-resident-search').addEventListener('input',e=>{let visible=0;for(const row of dialog.querySelectorAll('[data-recipient]')){row.hidden=!row.dataset.name.toLocaleLowerCase('fr').includes(e.target.value.toLocaleLowerCase('fr'));if(!row.hidden)visible++;}dialog.querySelector('#dm-directory-empty').hidden=!!visible;});
+ dialog.querySelector('#dm-resident-search').addEventListener('input',e=>{let visible=0;const query=normalizeSearch(e.target.value);for(const row of dialog.querySelectorAll('[data-recipient]')){row.hidden=!normalizeSearch(row.dataset.name).includes(query);if(!row.hidden)visible++;}dialog.querySelector('#dm-directory-empty').hidden=!!visible||!residents.length;});
  dialog.querySelector('.dm-residents').addEventListener('click',async e=>{const b=e.target.closest('[data-recipient]');if(!b)return;b.disabled=true;try{await openContact({recipientId:b.dataset.recipient});}catch(error){dialog.querySelector('.form-error').textContent=error.message;b.disabled=false;}});
 }
 async function onClick(e){
  const b=e.target.closest('[data-dm]');if(!b)return;const action=b.dataset.dm,serial=epoch;
  try{
-  if(action==='new')await directory();
+  if(action==='new'){b.disabled=true;try{await directory();}finally{b.disabled=false;}}
   if(action==='refresh'){await refreshInbox();if(activeId)await loadThread(!$('#dm-form'));}
   if(action==='post')await ui.openPost(b.dataset.id);
   if(action==='clear-context'){context=null;$('#dm-context').replaceChildren();}
-  if(action==='older'&&nextBefore){b.disabled=true;const data=await request('conversations/'+activeId+'?before='+nextBefore);if(serial!==epoch)return;mergeRows(data.messages);nextBefore=data.nextBefore;renderFeed();b.disabled=false;}
+  if(action==='older'&&nextBefore){b.disabled=true;const data=await request('conversations/'+activeId+'?before='+nextBefore);if(serial!==epoch)return;mergeRows(data.messages);nextBefore=data.nextBefore;renderFeed(false,true);b.disabled=false;}
  }catch(error){if(serial===epoch){status(error.message);b.disabled=false;}}
 }
 function onInput(e){if(e.target.id==='dm-body')drafts.set(activeId,{text:e.target.value,key:crypto.randomUUID()});}
 async function onSubmit(e){
  if(e.target.id!=='dm-form')return;e.preventDefault();if(busy)return;
  const serial=epoch,id=activeId,owner=viewer?.id,form=e.target,draft=drafts.get(id),button=form.querySelector('[type="submit"]'),error=form.querySelector('.form-error');
+ let sentSuccessfully=false;
  if(!draft?.text.trim()){error.textContent='Écrivez un message avant de l’envoyer.';return;}
  busy=true;button.disabled=true;form.querySelector('textarea').disabled=true;error.textContent='';
  try{
   const sent=await request('conversations/'+id+'/messages',{method:'POST',body:{id:draft.key,body:draft.text,...(context?{postId:context.id}:{})}});
   if(owner===viewer?.id&&drafts.get(id)===draft)drafts.delete(id);
   if(serial!==epoch)return;mergeRows([sent.message]);$('#dm-body').value='';context=null;$('#dm-context').replaceChildren();history.replaceState(null,'','#/messages?c='+id);
-  busy=false;await loadThread();renderFeed(true);await refreshInbox();$('#dm-body')?.focus();
+  renderFeed(true);sentSuccessfully=true;
  }catch(err){if(serial===epoch){error.textContent=err.message;error.focus();}}
- finally{if(serial===epoch){busy=false;button.disabled=false;form.querySelector('textarea').disabled=false;}}
+ finally{if(serial===epoch){busy=false;button.disabled=false;form.querySelector('textarea').disabled=false;if(sentSuccessfully)$('#dm-body')?.focus({preventScroll:true});}}
+ // Release the composer before refreshing; an older refresh must not enable a later send.
+ if(sentSuccessfully&&serial===epoch){await loadThread();await refreshInbox();}
 }
 setInterval(()=>{if(viewer&&!root&&!document.hidden&&navigator.onLine)refreshInbox();},15000);
 

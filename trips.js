@@ -33,6 +33,17 @@ const tripDate = (trip) =>
 const schedule = (trip) =>
   `<time datetime="${esc(trip.date)}">${esc(tripDate(trip))} à <strong>${esc(trip.date.slice(11))}</strong></time>`;
 
+export function seatText(trip) {
+  if (trip.rideType !== 'offer') return '';
+  if (!Number.isInteger(trip.seats)) return 'Places à préciser';
+  if (trip.seats === 0) return 'Complet · 0 place disponible';
+  return `${trip.seats} place${trip.seats > 1 ? 's' : ''} disponible${trip.seats > 1 ? 's' : ''}`;
+}
+const seatSummary = (trip) =>
+  trip.rideType === 'offer'
+    ? `<p class="ride-seats${trip.seats === 0 ? ' ride-full' : ''}">${icon('users')}<strong>${esc(seatText(trip))}</strong></p>`
+    : '';
+
 export function selectTrips(trips, filter = 'Tout', query = '', now = new Date()) {
   const current = now.getTime();
   return trips
@@ -51,7 +62,7 @@ export function tripsPage(trips, { filter, query, loading }) {
   const cards = selected
     .map(
       (trip) =>
-        `<article class="ride-card"><div class="ride-card-main"><div class="ride-badges">${tripBadge(trip)}${trip.mine ? '<span class="badge plain">Votre trajet</span>' : ''}</div><h2><button class="title-button" data-action="detail" data-id="${trip.id}">${icon('pin')}Vers ${esc(trip.destination)}</button></h2>${trip.recurrence ? `<p class="ride-recurring">${icon('repeat')}${esc(recurrenceText(trip))}</p><p class="ride-timezone">Prochain départ</p>` : ''}<p class="ride-schedule">${icon('calendar')}${schedule(trip)}</p><p class="ride-author">Partagé par ${esc(trip.authorName || 'Un habitant')}</p></div><button class="btn secondary" data-action="detail" data-id="${trip.id}">${trip.canManage ? 'Voir et gérer' : 'Voir le trajet'}</button></article>`,
+        `<article class="ride-card"><div class="ride-card-main"><div class="ride-badges">${tripBadge(trip)}${trip.mine ? '<span class="badge plain">Votre trajet</span>' : ''}</div><h2><button class="title-button" data-action="detail" data-id="${trip.id}">${icon('pin')}Vers ${esc(trip.destination)}</button></h2>${trip.recurrence ? `<p class="ride-recurring">${icon('repeat')}${esc(recurrenceText(trip))}</p><p class="ride-timezone">Prochain départ</p>` : ''}<p class="ride-schedule">${icon('calendar')}${schedule(trip)}</p>${seatSummary(trip)}<p class="ride-author">Partagé par ${esc(trip.authorName || 'Un habitant')}</p></div><button class="btn secondary" data-action="detail" data-id="${trip.id}">${trip.canManage ? 'Voir et gérer' : 'Voir le trajet'}</button></article>`,
     )
     .join('');
   return `<section class="rides-page"><div class="page-heading"><div><p class="eyebrow">FAIRE UN BOUT DE CHEMIN</p><h1>Les trajets entre voisins</h1><p>Une place à proposer ou un trajet à trouver ? Partagez votre destination.</p></div><button class="btn primary" data-action="compose" data-kind="trips">${icon('plus')}Publier un trajet</button></div><p class="notice soft">${icon('chat')}Écrivez à l’auteur pour convenir du lieu de départ et des détails du trajet.</p><label class="search-box">${icon('search')}<span class="sr-only">Rechercher une destination ou un habitant</span><input id="search" type="search" placeholder="Rechercher une destination…" value="${esc(query)}"></label><div class="filters" aria-label="Filtrer les trajets">${['Tout', 'Propositions', 'Recherches'].map((value) => `<button class="chip ${filter === value ? 'selected' : ''}" data-action="filter" data-value="${value}" aria-pressed="${filter === value}">${value === 'Tout' ? 'Tous les trajets à venir' : value}</button>`).join('')}</div><p class="results-count" role="status">${loading ? 'Chargement des trajets…' : `${selected.length} trajet${selected.length > 1 ? 's' : ''} à venir`}</p><p class="ride-timezone">Dates et heures locales de Prémeyzel.</p>${loading ? '' : selected.length ? `<div class="ride-list">${cards}</div>` : `<div class="empty">${icon('car')}<h3>${query || filter !== 'Tout' ? 'Aucun trajet ne correspond' : 'On partage le prochain trajet ?'}</h3><p>${query || filter !== 'Tout' ? 'Essayez une autre destination ou retirez les filtres.' : 'Proposez votre trajet ou indiquez celui que vous cherchez.'}</p>${query || filter !== 'Tout' ? '<button class="btn secondary" data-action="reset-search">Effacer la recherche et les filtres</button>' : ''}</div>`}</section>`;
@@ -71,7 +82,7 @@ export function recurrenceText(trip) {
 }
 export function tripFields(trip = {}) {
   const regular = !!trip.recurrence;
-  return `<fieldset class="ride-type"><legend>Votre trajet</legend><label><input type="radio" name="rideType" value="offer" ${trip.rideType !== 'request' ? 'checked' : ''} required>Je propose un trajet</label><label><input type="radio" name="rideType" value="request" ${trip.rideType === 'request' ? 'checked' : ''} required>Je cherche un trajet</label></fieldset><label>Destination<input name="destination" value="${esc(trip.destination || '')}" placeholder="Belley, gare de Culoz…" maxlength="120" required></label><fieldset class="ride-type ride-schedule-choice"><legend>Fréquence</legend><label><input type="radio" name="schedule" value="once" ${regular ? '' : 'checked'}>Une seule fois</label><label><input type="radio" name="schedule" value="regular" ${regular ? 'checked' : ''}>Trajet régulier</label></fieldset><div class="form-grid"><label><span id="ride-date-label">${regular ? 'À partir du' : 'Date'}</span><input type="date" name="date" ${regular ? '' : `min="${parisDateTime().slice(0, 10)}"`} value="${esc(trip.startsOn || trip.date?.slice(0, 10) || '')}" required></label><label>Heure<input type="time" name="tripTime" value="${esc(trip.date?.slice(11) || '')}" required></label></div><fieldset id="ride-repeat" class="ride-repeat" ${regular ? '' : 'hidden disabled'}><legend>Quels jours ?</legend><p class="fine">Choisissez les jours et la fréquence de chacun. Une semaine sur deux commence au premier jour choisi à partir de la date de début.</p>${WEEKDAYS.map(
+  return `<fieldset class="ride-type"><legend>Votre trajet</legend><label><input type="radio" name="rideType" value="offer" ${trip.rideType !== 'request' ? 'checked' : ''} required>Je propose un trajet</label><label><input type="radio" name="rideType" value="request" ${trip.rideType === 'request' ? 'checked' : ''} required>Je cherche un trajet</label></fieldset><label>Destination<input name="destination" value="${esc(trip.destination || '')}" placeholder="Belley, gare de Culoz…" maxlength="120" required></label><div id="ride-seats-field" ${trip.rideType === 'request' ? 'hidden' : ''}><label>Places disponibles<input type="number" name="seats" min="0" max="8" step="1" inputmode="numeric" value="${esc(trip.seats ?? (trip.id ? '' : 1))}" aria-describedby="ride-seats-help" ${trip.rideType === 'request' ? 'disabled' : 'required'}></label><p id="ride-seats-help" class="fine">De 0 à 8 passagers, sans compter le conducteur. Indiquez 0 si le trajet est complet. Mettez ce nombre à jour lorsque des places sont prises. Pour un trajet régulier, il s’applique à chaque départ.</p></div><fieldset class="ride-type ride-schedule-choice"><legend>Fréquence</legend><label><input type="radio" name="schedule" value="once" ${regular ? '' : 'checked'}>Une seule fois</label><label><input type="radio" name="schedule" value="regular" ${regular ? 'checked' : ''}>Trajet régulier</label></fieldset><div class="form-grid"><label><span id="ride-date-label">${regular ? 'À partir du' : 'Date'}</span><input type="date" name="date" ${regular ? '' : `min="${parisDateTime().slice(0, 10)}"`} value="${esc(trip.startsOn || trip.date?.slice(0, 10) || '')}" required></label><label>Heure<input type="time" name="tripTime" value="${esc(trip.date?.slice(11) || '')}" required></label></div><fieldset id="ride-repeat" class="ride-repeat" ${regular ? '' : 'hidden disabled'}><legend>Quels jours ?</legend><p class="fine">Choisissez les jours et la fréquence de chacun. Une semaine sur deux commence au premier jour choisi à partir de la date de début.</p>${WEEKDAYS.map(
     (name, i) => {
       const day = i + 1,
         rule = trip.recurrence?.days.find((r) => r.day === day);
@@ -82,6 +93,10 @@ export function tripFields(trip = {}) {
   )}<label>Jusqu’au (facultatif)<input type="date" name="until" value="${esc(trip.recurrence?.until || '')}"></label><p class="fine">Sans date de fin, le trajet se répète jusqu’à ce que vous le supprimiez. L’heure est la même pour tous les jours choisis.</p></fieldset><p class="fine">À l’heure de Prémeyzel. Les habitants pourront vous écrire dans l’application pour organiser le trajet.</p>`;
 }
 export function updateTripForm(form) {
+  const offer = form.elements.rideType.value === 'offer';
+  form.querySelector('#ride-seats-field').hidden = !offer;
+  form.elements.seats.disabled = !offer;
+  form.elements.seats.required = offer;
   const regular = form.elements.schedule.value === 'regular';
   const repeat = form.querySelector('#ride-repeat');
   repeat.hidden = !regular;
@@ -99,7 +114,14 @@ export function tripInput(data) {
   const regular = data.get('schedule') === 'regular';
   if (regular && !days.length)
     throw new Error('Choisissez au moins un jour pour le trajet régulier.');
+  const seats = data.get('rideType') === 'offer' ? Number(data.get('seats')) : null;
+  if (
+    data.get('rideType') === 'offer' &&
+    (!data.get('seats')?.trim() || !Number.isInteger(seats) || seats < 0 || seats > 8)
+  )
+    throw new Error('Indiquez un nombre de places disponibles entre 0 et 8.');
   return {
+    seats,
     destination: data.get('destination'),
     rideType: data.get('rideType'),
     date: data.get('date') + 'T' + data.get('tripTime'),
@@ -108,5 +130,5 @@ export function tripInput(data) {
 }
 
 export function tripDetail(trip) {
-  return `<div class="ride-detail"><div class="detail-top">${tripBadge(trip)}<span class="author">Partagé par ${esc(trip.authorName || 'Un habitant')}</span></div><p class="ride-destination">${icon('pin')}Destination : <strong>${esc(trip.destination)}</strong></p>${trip.recurrence ? `<p class="ride-recurring">${icon('repeat')}${esc(recurrenceText(trip))}</p><p class="ride-timezone">Prochain départ</p>` : ''}<p class="ride-schedule">${icon('calendar')}${schedule(trip)}</p><p class="ride-timezone">Heure locale de Prémeyzel.</p>${trip.recurrence?.until ? `<p class="ride-timezone">Jusqu’au ${esc(new Date(trip.recurrence.until + 'T12:00Z').toLocaleDateString('fr-FR', { timeZone: 'UTC' }))}.</p>` : ''}<p>Le lieu de départ et les autres détails se conviennent directement par message.</p></div>`;
+  return `<div class="ride-detail"><div class="detail-top">${tripBadge(trip)}<span class="author">Partagé par ${esc(trip.authorName || 'Un habitant')}</span></div><p class="ride-destination">${icon('pin')}Destination : <strong>${esc(trip.destination)}</strong></p>${trip.recurrence ? `<p class="ride-recurring">${icon('repeat')}${esc(recurrenceText(trip))}</p><p class="ride-timezone">Prochain départ</p>` : ''}<p class="ride-schedule">${icon('calendar')}${schedule(trip)}</p>${seatSummary(trip)}<p class="ride-timezone">Heure locale de Prémeyzel.</p>${trip.recurrence?.until ? `<p class="ride-timezone">Jusqu’au ${esc(new Date(trip.recurrence.until + 'T12:00Z').toLocaleDateString('fr-FR', { timeZone: 'UTC' }))}.</p>` : ''}<p>Le lieu de départ et les autres détails se conviennent directement par message.</p></div>`;
 }

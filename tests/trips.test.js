@@ -109,3 +109,53 @@ test('regular rides preserve their original start date and independent day frequ
   data.set('schedule', 'once');
   assert.equal(tripInput(data).recurrence, null);
 });
+
+test('available seat counts appear in cards and details with full and unknown states', () => {
+  const base = {
+    id: 'ride',
+    destination: 'Belley',
+    rideType: 'offer',
+    date: '2099-06-12T08:30',
+    departureAt: Date.parse('2099-06-12T06:30Z'),
+  };
+  for (const [seats, label] of [
+    [3, '3 places disponibles'],
+    [1, '1 place disponible'],
+    [0, 'Complet · 0 place disponible'],
+    [undefined, 'Places à préciser'],
+  ]) {
+    const ride = { ...base, seats };
+    for (const html of [
+      tripDetail(ride),
+      tripsPage([ride], { filter: 'Tout', query: '', loading: false }),
+    ])
+      assert.ok(html.includes(label));
+  }
+  assert.doesNotMatch(tripDetail({ ...base, rideType: 'request', seats: 3 }), /places disponibles/);
+  const fields = tripFields({ ...base, seats: 0 });
+  assert.match(fields, /name="seats"[^>]*value="0"[^>]*required/);
+  assert.match(tripFields({ ...base, rideType: 'request' }), /name="seats"[^>]*disabled/);
+  assert.match(tripFields(base), /name="seats"[^>]*value=""/);
+});
+
+test('offer forms submit seats, including zero, while switching to a request clears them', () => {
+  const data = new FormData();
+  for (const [key, value] of Object.entries({
+    destination: 'Belley',
+    rideType: 'offer',
+    schedule: 'once',
+    date: '2099-06-12',
+    tripTime: '08:30',
+    seats: '3',
+  }))
+    data.set(key, value);
+  assert.equal(tripInput(data).seats, 3);
+  data.set('seats', '0');
+  assert.equal(tripInput(data).seats, 0);
+  for (const value of ['', ' ', '-1', '9', '1.5']) {
+    data.set('seats', value);
+    assert.throws(() => tripInput(data), /places disponibles/);
+  }
+  data.set('rideType', 'request');
+  assert.equal(tripInput(data).seats, null);
+});

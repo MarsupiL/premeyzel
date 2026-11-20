@@ -48,13 +48,21 @@ if ('serviceWorker' in navigator)
 async function readState() {
   return (await (await caches.open(STATE_CACHE)).match(stateURL))?.json() || {};
 }
-async function writeState(value) {
-  await (
-    await caches.open(STATE_CACHE)
-  ).put(
-    stateURL,
-    new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } }),
-  );
+// Serialize storage writes so a delayed opt-in cannot restore state after logout.
+let stateWrite = Promise.resolve();
+function writeState(value, serial = epoch) {
+  stateWrite = stateWrite
+    .catch(() => {})
+    .then(async () => {
+      if (serial !== epoch) return;
+      await (
+        await caches.open(STATE_CACHE)
+      ).put(
+        stateURL,
+        new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } }),
+      );
+    });
+  return stateWrite;
 }
 async function getRegistration() {
   const reg = await registration;
@@ -123,13 +131,15 @@ export async function syncPushAccount(user, force = false) {
     let sub = await reg.pushManager.getSubscription();
     if (serial !== epoch) return;
     if (saved.owner && saved.owner !== current) {
-      await writeState({});
+      await writeState({}, serial);
+      if (serial !== epoch) return;
       if (sub && !(await sub.unsubscribe()))
         throw new Error('Impossible de changer le compte des notifications. Réessayez.');
       sub = null;
     }
-    config = await request('push/config');
+    const nextConfig = await request('push/config');
     if (serial !== epoch) return;
+    config = nextConfig;
     enabled = false;
     if (
       sub &&
@@ -173,7 +183,7 @@ export async function syncPushAccount(user, force = false) {
     checked = Date.now();
     error = '';
   } catch (err) {
-    error = err.message;
+    if (serial === epoch) error = err.message;
   } finally {
     busy = false;
     changed();
@@ -187,16 +197,21 @@ async function enable(permission) {
   error = '';
   changed();
   try {
-    if ((await permission) !== 'granted')
+    const granted = await permission;
+    if (serial !== epoch) return;
+    if (granted !== 'granted')
       throw new Error(
         'Notifications non autorisées. Vous pouvez les activer plus tard dans les réglages du navigateur.',
       );
     const reg = await getRegistration();
-    config = await request('push/config');
-    if (!config.enabled) throw new Error('Les notifications sont momentanément indisponibles.');
     if (serial !== epoch) return;
+    const nextConfig = await request('push/config');
+    if (serial !== epoch) return;
+    config = nextConfig;
+    if (!config.enabled) throw new Error('Les notifications sont momentanément indisponibles.');
     let sub = await reg.pushManager.getSubscription();
     const saved = await readState();
+    if (serial !== epoch) return;
     if (sub && saved.owner !== current) {
       if (!(await sub.unsubscribe()))
         throw new Error('Impossible de renouveler les notifications. Réessayez.');
@@ -215,14 +230,16 @@ async function enable(permission) {
       await sub.unsubscribe();
       return;
     }
-    await writeState({ owner: current, enabled: true });
+    await writeState({ owner: current, enabled: true }, serial);
+    if (serial !== epoch) return;
     enabled = true;
     checked = Date.now();
   } catch (err) {
-    error = err.message;
+    if (serial === epoch) error = err.message;
   } finally {
     busy = false;
     changed();
+    if (owner && owner !== current) syncPushAccount({ id: owner }, true);
   }
 }
 export async function updateAppBadge(count) {

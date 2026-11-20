@@ -114,7 +114,7 @@ const dateText = (value) =>
   );
 const badge = (text, kind = '') => `<span class="badge ${kind}">${esc(text)}</span>`;
 const title = (kicker, heading, text, button = '') =>
-  `<div class="page-heading"><div><p class="eyebrow">${kicker}</p><h1>${heading}</h1><p>${text}</p></div>${button}</div>`;
+  `<div class="page-heading"><div><p class="eyebrow">${kicker}</p><h1>${heading}</h1>${text ? `<p>${text}</p>` : ''}</div>${button}</div>`;
 const empty = (heading, text) =>
   `<div class="empty">${icon('leaf')}<h3>${heading}</h3><p>${text}</p></div>`;
 const publish = (kind, label) =>
@@ -185,6 +185,7 @@ function currentTripView() {
 }
 function updateTripResults() {
   $('#trip-date-help').textContent = tripDateHelp(tripDate);
+  $('#trip-date-help').hidden = !tripDate;
   $('#trip-results').innerHTML = loadError
     ? `<div class="notice warning" role="alert"><span>${esc(loadError)}</span><button class="btn secondary" data-action="refresh">Réessayer</button></div>`
     : tripResults(...currentTripView());
@@ -296,10 +297,10 @@ function listPage(kind) {
           normalizeSearch(query),
         ),
     );
-  return `${kind === 'events' ? title('SE RETROUVER', 'Les rendez-vous du village', 'Un atelier, une fête, un moment à partager.', publish(kind, 'Proposer un événement')) : title('ÇA PEUT SERVIR', 'Les petites annonces', 'À donner, à louer, à prêter… et tellement à partager.', publish(kind, 'Déposer une annonce'))}<label class="search-box">${icon('search')}<span class="sr-only">Rechercher</span><input id="search" type="search" placeholder="Rechercher…" value="${esc(query)}"></label><div class="filters">${['Tout', ...(kind === 'events' ? EVENT_CATEGORIES : AD_CATEGORIES)].map((value) => `<button class="chip ${filter === value ? 'selected' : ''}" data-action="filter" data-value="${esc(value)}" aria-pressed="${filter === value}">${value}</button>`).join('')}</div><p class="results-count" role="status">${posts.length} publication${posts.length > 1 ? 's' : ''}</p>${loading ? '<p class="notice">Chargement des publications…</p>' : posts.length ? `<div class="${kind === 'events' ? 'event' : 'ad'}-grid">${posts.map(postCard).join('')}</div>` : normalizeSearch(query) || filter !== 'Tout' ? `<div class="empty">${icon('search')}<h3>Aucune publication ne correspond</h3><p>Essayez un autre mot ou retirez les filtres.</p><button class="btn secondary" data-action="reset-search">Effacer la recherche et les filtres</button></div>` : empty('À vous de commencer', 'La prochaine bonne idée peut être la vôtre.')}`;
+  return `${kind === 'events' ? title('SE RETROUVER', 'Les rendez-vous du village', '', publish(kind, 'Proposer un événement')) : title('ÇA PEUT SERVIR', 'Les petites annonces', '', publish(kind, 'Déposer une annonce'))}<label class="search-box">${icon('search')}<span class="sr-only">Rechercher</span><input id="search" type="search" placeholder="Rechercher…" value="${esc(query)}"></label><div class="filters">${['Tout', ...(kind === 'events' ? EVENT_CATEGORIES : AD_CATEGORIES)].map((value) => `<button class="chip ${filter === value ? 'selected' : ''}" data-action="filter" data-value="${esc(value)}" aria-pressed="${filter === value}">${value}</button>`).join('')}</div><p class="results-count" role="status">${posts.length} publication${posts.length > 1 ? 's' : ''}</p>${loading ? '<p class="notice">Chargement des publications…</p>' : posts.length ? `<div class="${kind === 'events' ? 'event' : 'ad'}-grid">${posts.map(postCard).join('')}</div>` : normalizeSearch(query) || filter !== 'Tout' ? `<div class="empty">${icon('search')}<h3>Aucune publication ne correspond</h3><p>Essayez un autre mot ou retirez les filtres.</p><button class="btn secondary" data-action="reset-search">Effacer la recherche et les filtres</button></div>` : empty('À vous de commencer', 'La prochaine bonne idée peut être la vôtre.')}`;
 }
 function accountPage() {
-  return `${title('MON COIN DU VILLAGE', 'Bonjour ' + esc(firstName()), 'Retrouvez votre compte et vos publications.')}<section class="account-card"><div><h2>${esc(user.name)}</h2>${badge(roleName(user.role))}<p>Votre compte fonctionne sur tous vos appareils après connexion.</p></div><button class="btn secondary" data-action="sign-out">${icon('logout')}Me déconnecter</button></section>${profileSection()}${pushSettings()}${hasLegacyTrails() ? '<section class="activity-section"><h2>Vos parcours du pilote</h2><p>Rattachez les parcours créés avec ce navigateur à votre compte pour les gérer aussi depuis vos autres appareils.</p><button class="btn secondary" data-action="claim-trails">Rattacher mes anciens parcours</button></section>' : ''}<section class="activity-section"><div class="section-heading"><h2>Mes publications</h2>${publish('', 'Publier')}</div>${
+  return `${title('MON COIN DU VILLAGE', 'Bonjour ' + esc(firstName()), '')}<section class="account-card"><div><h2>${esc(user.name)}</h2>${badge(roleName(user.role))}</div><button class="btn secondary" data-action="sign-out">${icon('logout')}Me déconnecter</button></section>${profileSection()}${pushSettings()}${hasLegacyTrails() ? '<section class="activity-section"><h2>Vos parcours du pilote</h2><p>Rattachez les parcours créés avec ce navigateur à votre compte pour les gérer aussi depuis vos autres appareils.</p><button class="btn secondary" data-action="claim-trails">Rattacher mes anciens parcours</button></section>' : ''}<section class="activity-section"><div class="section-heading"><h2>Mes publications</h2>${publish('', 'Publier')}</div>${
     [...events, ...ads, ...trips]
       .filter((p) => p.mine)
       .map(
@@ -310,7 +311,7 @@ function accountPage() {
   }<p><a href="#/balades" class="text-link">Retrouver et gérer mes parcours</a></p></section>${isAdmin() ? '<a class="btn primary" href="#/admin">Administrer le village</a>' : ''}`;
 }
 function profileSection() {
-  return `<section class="activity-section profile-section" aria-labelledby="profile-heading"><div class="section-heading"><div><h2 id="profile-heading">Mon profil</h2><p>Un nom et un visage pour se reconnaître entre voisins.</p></div><button class="btn secondary" data-action="edit-profile">${icon('edit')}Modifier mon profil</button></div><div class="profile-summary">${avatar(user, 'large')}<div><strong>${esc(user.name)}</strong><p>Votre photo est visible par les habitants connectés.</p></div></div><a class="text-link" href="#/messages">${icon('chat')}Retrouver mes messages</a></section>`;
+  return `<section class="activity-section profile-section" aria-labelledby="profile-heading"><div class="section-heading"><div><h2 id="profile-heading">Mon profil</h2></div><button class="btn secondary" data-action="edit-profile">${icon('edit')}Modifier mon profil</button></div><div class="profile-summary">${avatar(user, 'large')}<div><strong>${esc(user.name)}</strong><p>Votre photo est visible par les habitants connectés.</p></div></div><a class="text-link" href="#/messages">${icon('chat')}Retrouver mes messages</a></section>`;
 }
 async function profileDialog() {
   const serial = ++detailRequest,

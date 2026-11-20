@@ -37,6 +37,10 @@ const CATEGORY_ART = {
     'À vendre': 'ad-sell',
     'Perdu / trouvé': 'ad-lost',
   },
+  trails: {
+    Marche: 'trail-hiking',
+    VTT: 'trail-cycling',
+  },
 };
 export const defaultArt = (type, category) =>
   Object.getOwnPropertyDescriptor(CATEGORY_ART[type] || {}, category)?.value ||

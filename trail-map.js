@@ -190,13 +190,25 @@ export function createTrailMap(
   function setTrails(next, selection, fitRoute = true) {
     layers.clearLayers();
     selected = null;
-    for (const trail of next) {
+    // Draw the selected route last so it stays visible where routes overlap.
+    const ordered = [...next].sort(
+      (a, b) => Number(a.id === selection) - Number(b.id === selection),
+    );
+    for (const trail of ordered) {
       if (!trail.track?.segments?.length) continue;
       const active = trail.id === selection;
+      const color = active ? '#d000a8' : '#6d28d9';
+      // A white casing separates the route from contour lines and wooded areas.
+      L.polyline(trail.track.segments, {
+        color: '#fff',
+        weight: active ? 10 : 7,
+        opacity: 1,
+        interactive: false,
+      }).addTo(layers);
       const line = L.polyline(trail.track.segments, {
-        color: active ? '#9d3f28' : '#426e58',
-        weight: active ? 5 : 3,
-        opacity: active ? 1 : 0.6,
+        color,
+        weight: active ? 6 : 4,
+        opacity: 1,
       }).addTo(layers);
       line.on('click', () => (onOpen ? onOpen(trail.id) : onSelect(trail.id)));
       if (active) {
@@ -205,9 +217,9 @@ export function createTrailMap(
           last = trail.track.segments.at(-1).at(-1);
         L.circleMarker(first, {
           radius: 6,
-          color: '#fff',
-          weight: 2,
-          fillColor: '#284f3c',
+          color,
+          weight: 3,
+          fillColor: '#fff',
           fillOpacity: 1,
         })
           .bindTooltip('Départ')
@@ -216,7 +228,7 @@ export function createTrailMap(
           radius: 6,
           color: '#fff',
           weight: 2,
-          fillColor: '#9d3f28',
+          fillColor: color,
           fillOpacity: 1,
         })
           .bindTooltip('Arrivée')

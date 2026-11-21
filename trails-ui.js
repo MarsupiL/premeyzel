@@ -129,14 +129,20 @@ async function fullTrail(id) {
   cache();
   return full;
 }
-async function select(id) {
+async function select(id, { reveal = false } = {}) {
   selectedId = id;
   updateList();
   map?.setTrails(
     visible().map((p) => byId(p.id)),
     id,
-    true,
+    !reveal,
   );
+  if (reveal)
+    root?.querySelector('.trail-card.selected')?.scrollIntoView({
+      behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'nearest',
+      inline: 'nearest',
+    });
   try {
     await fullTrail(id);
     if (root && selectedId === id) {
@@ -256,8 +262,7 @@ export async function mountTrails(
   map = createTrailMap(root.querySelector('#shared-trail-map'), {
     trails: visible().map((p) => byId(p.id)),
     selectedId,
-    onSelect: select,
-    onOpen: (id) => openRoute(id),
+    onSelect: (id) => select(id, { reveal: true }),
   });
   map.setOfflinePack(savedPack(selectedId) || null);
   hunting = mountHunting(root.querySelector('#hunting-zones'), { account, onRequireAuth, dialog });

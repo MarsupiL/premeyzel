@@ -5,7 +5,7 @@ import { tileURL, MIN_OFFLINE_ZOOM, MAX_OFFLINE_ZOOM } from './trail-offline.js'
 
 export function createTrailMap(
   container,
-  { trails = [], selectedId, onSelect = () => {}, onOpen = null, tracking = false } = {},
+  { trails = [], selectedId, onSelect = () => {}, tracking = false } = {},
 ) {
   container.classList.toggle('tracking-map', tracking);
   const L = globalThis.L;
@@ -210,7 +210,7 @@ export function createTrailMap(
         weight: active ? 6 : 4,
         opacity: 1,
       }).addTo(layers);
-      line.on('click', () => (onOpen ? onOpen(trail.id) : onSelect(trail.id)));
+      line.on('click', () => onSelect(trail.id));
       if (active) {
         selected = line;
         const first = trail.track.segments[0][0],

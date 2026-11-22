@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { defaultArt, photoSource } from '../photos.js';
 import { cardArt } from '../art.js';
+import { normalizeSearch } from '../search.js';
 const source = readFileSync(new URL('../trails-ui.js', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\n/gm, '')
   .replaceAll('export ', '');
@@ -15,6 +16,87 @@ const deferred = () => {
   });
   return { promise, resolve };
 };
+test('trail refreshes preserve the map view while updating routes; explicit selection can still fit', async () => {
+  const pending = deferred(),
+    requested = deferred(),
+    draws = [],
+    nodes = new Map(),
+    trail = { id: 'trail', title: 'A walk', activity: 'Marche', revision: 2, preview: true };
+  let scrolls = 0;
+  const context = vm.createContext({
+    esc,
+    normalizeSearch,
+    defaultArt,
+    cardArt,
+    photoSource,
+    TRAIL_API: 'https://village.example',
+    navigator: { onLine: true },
+    localStorage: { setItem() {} },
+    matchMedia: () => ({ matches: true }),
+    fetchTrails: async () => ({ trails: [trail], etag: 'updated' }),
+    fetchTrail: () => {
+      requested.resolve();
+      return pending.promise;
+    },
+    rootFixture: {
+      querySelector(selector) {
+        if (!nodes.has(selector))
+          nodes.set(selector, {
+            innerHTML: '',
+            textContent: '',
+            scrollIntoView() {
+              scrolls++;
+            },
+          });
+        return nodes.get(selector);
+      },
+    },
+    mapFixture: {
+      setOfflinePack() {},
+      setTrails: (trails, selected, fit) => draws.push({ trails, selected, fit }),
+    },
+  });
+  vm.runInContext(
+    source +
+      `\nroot=rootFixture;map=mapFixture;selectedId='trail';
+      items=[{id:'trail',title:'Old name',revision:1}];
+      this.api={refresh,select};`,
+    context,
+  );
+  const refreshing = context.api.refresh();
+  await requested.promise;
+  assert.ok(draws.length > 0, 'updated route previews render while full geometry loads');
+  assert.ok(
+    draws.every((draw) => draw.fit === false),
+    'refresh never recentres the map',
+  );
+  pending.resolve({ ...trail, preview: false, title: 'Updated walk' });
+  await refreshing;
+  assert.equal(draws.at(-1).trails[0].title, 'Updated walk');
+  assert.ok(
+    draws.every((draw) => draw.fit === false),
+    'late geometry does not reset zoom',
+  );
+  await context.api.refresh(true);
+  assert.ok(
+    draws.every((draw) => draw.fit === false),
+    'manual refresh also preserves the view',
+  );
+  assert.equal(scrolls, 0, 'refreshes do not scroll the list');
+  draws.length = 0;
+  await context.api.select('trail');
+  assert.ok(
+    draws.some((draw) => draw.fit === true),
+    'a list selection still frames its route',
+  );
+  draws.length = 0;
+  await context.api.select('trail', { reveal: true });
+  assert.ok(
+    draws.every((draw) => draw.fit === false),
+    'map taps preserve the map view',
+  );
+  assert.equal(scrolls, 1, 'map taps still reveal the matching card');
+});
 test('saved full tracks open without an API call offline and remain a fallback when reception fails', async () => {
   let calls = 0;
   const context = vm.createContext({

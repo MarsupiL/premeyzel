@@ -129,13 +129,13 @@ async function fullTrail(id) {
   cache();
   return full;
 }
-async function select(id, { reveal = false } = {}) {
+async function select(id, { reveal = false, fitRoute = !reveal } = {}) {
   selectedId = id;
   updateList();
   map?.setTrails(
     visible().map((p) => byId(p.id)),
     id,
-    !reveal,
+    fitRoute,
   );
   if (reveal)
     root?.querySelector('.trail-card.selected')?.scrollIntoView({
@@ -188,7 +188,8 @@ async function refresh(force = false) {
       cache();
       if (root) {
         updateList();
-        if (selectedId) await select(selectedId);
+        // Shared-data updates must preserve the user's zoom and map position.
+        if (selectedId) await select(selectedId, { fitRoute: false });
       }
     }
     notice(navigator.onLine ? '' : 'Hors connexion · copie locale du parcours.');

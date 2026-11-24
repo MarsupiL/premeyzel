@@ -139,7 +139,7 @@ html:has(dialog.modal[open]),body:has(dialog.modal[open]){overflow:hidden;oversc
 .trails-sync{font-size:.875rem;line-height:1.6;margin-bottom:20px}
 .trail-search-row{display:flex;gap:12px;align-items:center;margin-bottom:12px}.trail-search-row .search-box{flex:1;margin:0}
 .trail-author{display:block;font-size:.875rem;color:var(--muted);margin-top:8px}
-.real-trails{align-items:start}.real-trails .trail-list{display:flex;flex-direction:column;max-height:720px;overflow:auto}.real-trails .trail-card{scroll-margin-block:16px}.real-trails .trail-card.selected{background:#fff2fc}
+.real-trails{align-items:start}.real-trails .trail-list{display:flex;flex-direction:column;max-height:720px;overflow:auto}.real-trails .trail-card{flex-shrink:0;scroll-margin-block:16px}.real-trails .trail-card.selected{background:#fff2fc}
 .real-trails .trail-select h3{font-size:1.125rem}.real-trails .trail-stats{font-size:.875rem;line-height:1.6}
 .real-trail-map{height:480px;isolation:isolate}.real-trails .map-panel{position:sticky;top:20px;overflow:hidden;min-width:0}
 .selected-trail{padding:22px;border-top:1px solid var(--line);background:var(--white)}.selected-trail h2{font-size:1.5rem;margin:10px 0}.selected-trail p{font-size:1rem;margin-bottom:16px}.selected-trail .button-row{flex-wrap:wrap}
